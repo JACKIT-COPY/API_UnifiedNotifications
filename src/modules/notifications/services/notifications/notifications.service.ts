@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { LancolaSmsService } from 'src/integrations/lancola-sms/services/lancola-sms/lancola-sms.service';
 import { LancolaEmailService } from 'src/integrations/lancola-email/services/lancola-email/lancola-email.service';
+import { LancolaWhatsAppService } from 'src/integrations/lancola-whatsapp/services/lancola-whatsapp/lancola-whatsapp.service';
 import { UsersService } from 'src/modules/users/services/users/users.service';
 import { NotificationPayload, NotificationType } from 'src/integrations/interfaces/notifications.interface';
 
@@ -14,6 +15,7 @@ export class NotificationsService {
   constructor(
     private readonly lancolaSmsService: LancolaSmsService,
     private readonly lancolaEmailService: LancolaEmailService,
+    private readonly lancolaWhatsAppService: LancolaWhatsAppService,
     private readonly usersService: UsersService,
   ) {}
 
@@ -34,6 +36,8 @@ export class NotificationsService {
         });
         break;
       case NotificationType.WHATSAPP:
+        await this.lancolaWhatsAppService.sendWhatsApp({ to: payload.to as string, message: payload.message });
+        break;
       case NotificationType.PUSH:
       case NotificationType.SYSTEM:
         throw new BadRequestException(`${payload.type} notifications not implemented yet`);
@@ -52,7 +56,10 @@ export class NotificationsService {
   async sendNotificationToAllUsers(payload: NotificationPayload): Promise<void> {
     const users = await this.usersService.getUsers();
     for (const user of users) {
-      const recipient = payload.type === NotificationType.SMS ? user.phone : user.email;
+      const recipient =
+        payload.type === NotificationType.SMS || payload.type === NotificationType.WHATSAPP
+          ? user.phone
+          : user.email;
       await this.sendNotification({ ...payload, to: recipient });
     }
   }

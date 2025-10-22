@@ -3,7 +3,7 @@ import { NotificationsService } from '../../services/notifications/notifications
 import { NotificationPayload, NotificationType } from 'src/integrations/interfaces/notifications.interface';
 import { IsEnum, IsNotEmpty, IsOptional, IsString, ValidateIf } from 'class-validator';
 
-class NotificationDto {
+class NotificationDto implements NotificationPayload {
   @IsEnum(NotificationType)
   type: NotificationType;
 
