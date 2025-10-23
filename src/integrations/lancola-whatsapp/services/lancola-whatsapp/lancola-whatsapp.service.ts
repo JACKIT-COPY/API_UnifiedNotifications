@@ -43,6 +43,7 @@ export class LancolaWhatsAppService {
           },
         ),
       );
+      console.log('WhatsApp API Response:', response.data);
 
       if (response.data.error) {
         throw new Error(response.data.error.message);
