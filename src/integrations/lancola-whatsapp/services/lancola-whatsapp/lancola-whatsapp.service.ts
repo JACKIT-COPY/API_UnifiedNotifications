@@ -32,8 +32,11 @@ export class LancolaWhatsAppService {
           {
             messaging_product: 'whatsapp',
             to: formattedPhone,
-            type: 'text',
-            text: { body: payload.message },
+            type: 'template',
+            template: {
+              name: 'hello_world',
+              language: { code: 'en_US' },
+            },
           },
           {
             headers: {
@@ -43,6 +46,7 @@ export class LancolaWhatsAppService {
           },
         ),
       );
+
       console.log('WhatsApp API Response:', response.data);
 
       if (response.data.error) {

@@ -1,7 +1,13 @@
 import { Body, Controller, Post, UsePipes, ValidationPipe } from '@nestjs/common';
 import { NotificationsService } from '../../services/notifications/notifications.service';
-import { NotificationPayload, NotificationType } from 'src/integrations/interfaces/notifications.interface';
+import { NotificationPayload, NotificationType } from 'src/integrations/interfaces/notification.interface';
 import { IsEnum, IsNotEmpty, IsOptional, IsString, ValidateIf } from 'class-validator';
+
+interface NotificationResult {
+  recipient: string;
+  status: 'success' | 'failed';
+  error?: string;
+}
 
 class NotificationDto implements NotificationPayload {
   @IsEnum(NotificationType)
@@ -11,9 +17,10 @@ class NotificationDto implements NotificationPayload {
   @IsNotEmpty()
   to: string | string[];
 
+  @ValidateIf(o => o.type === NotificationType.SMS || o.type === NotificationType.EMAIL)
   @IsString()
   @IsNotEmpty()
-  message: string;
+  message?: string;
 
   @ValidateIf(o => o.type === NotificationType.EMAIL)
   @IsString()
@@ -34,20 +41,18 @@ export class NotificationsController {
 
   @Post('send')
   @UsePipes(new ValidationPipe({ transform: true }))
-  async sendNotification(@Body() payload: NotificationDto): Promise<string> {
+  async sendNotification(@Body() payload: NotificationDto): Promise<NotificationResult | NotificationResult[]> {
     if (Array.isArray(payload.to)) {
-      await this.notificationsService.sendNotificationToUsers(payload);
-      return `Notifications of type ${payload.type} sent to multiple users`;
+      return this.notificationsService.sendNotificationToUsers(payload);
     } else {
       await this.notificationsService.sendNotification(payload);
-      return `Notification of type ${payload.type} sent to ${payload.to}`;
+      return { recipient: payload.to, status: 'success' };
     }
   }
 
   @Post('send-to-all')
   @UsePipes(new ValidationPipe({ transform: true }))
-  async sendNotificationToAllUsers(@Body() payload: NotificationDto): Promise<string> {
-    await this.notificationsService.sendNotificationToAllUsers(payload);
-    return `Notifications of type ${payload.type} sent to all users`;
+  async sendNotificationToAllUsers(@Body() payload: NotificationDto): Promise<NotificationResult[]> {
+    return this.notificationsService.sendNotificationToAllUsers(payload);
   }
 }
