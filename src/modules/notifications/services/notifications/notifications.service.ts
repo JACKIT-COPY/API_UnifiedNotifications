@@ -49,6 +49,7 @@ export class NotificationsService {
             subject: payload.subject,
             message: payload.message,
             templateId: payload.templateId,
+            attachments: payload.attachments,
           });
           break;
         case NotificationType.WHATSAPP:

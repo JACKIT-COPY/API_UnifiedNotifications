@@ -12,8 +12,14 @@ export class LancolaEmailService {
         to: payload.to,
         subject: payload.subject,
         text: payload.message,
-        // Add template support if templateId is provided
         ...(payload.templateId && { template: payload.templateId }),
+        ...(payload.attachments && {
+          attachments: payload.attachments.map(attachment => ({
+            filename: attachment.filename,
+            content: Buffer.from(attachment.content, 'base64'),
+            contentType: attachment.contentType,
+          })),
+        }),
       });
     } catch (error) {
       throw new InternalServerErrorException(`Failed to send email: ${error.message}`);

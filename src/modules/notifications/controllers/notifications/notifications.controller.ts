@@ -1,12 +1,21 @@
 import { Body, Controller, Post, UsePipes, ValidationPipe } from '@nestjs/common';
 import { NotificationsService } from '../../services/notifications/notifications.service';
 import { NotificationPayload, NotificationType } from 'src/integrations/interfaces/notification.interface';
-import { IsEnum, IsNotEmpty, IsOptional, IsString, ValidateIf } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString, ValidateIf, IsArray, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 
-interface NotificationResult {
-  recipient: string;
-  status: 'success' | 'failed';
-  error?: string;
+class AttachmentDto {
+  @IsString()
+  @IsNotEmpty()
+  filename: string;
+
+  @IsString()
+  @IsNotEmpty()
+  content: string;
+
+  @IsString()
+  @IsOptional()
+  contentType?: string;
 }
 
 class NotificationDto implements NotificationPayload {
@@ -33,6 +42,18 @@ class NotificationDto implements NotificationPayload {
 
   @IsOptional()
   data?: Record<string, any>;
+
+  @ValidateIf(o => o.type === NotificationType.EMAIL)
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AttachmentDto)
+  attachments?: AttachmentDto[];
+}
+
+interface NotificationResult {
+  recipient: string;
+  status: 'success' | 'failed';
+  error?: string;
 }
 
 @Controller('notifications')

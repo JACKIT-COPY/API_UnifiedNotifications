@@ -34,7 +34,7 @@ export class LancolaWhatsAppService {
             to: formattedPhone,
             type: 'template',
             template: {
-              name: 'hello_world',
+              name: 'cedars_newcase_alert',
               language: { code: 'en_US' },
             },
           },
