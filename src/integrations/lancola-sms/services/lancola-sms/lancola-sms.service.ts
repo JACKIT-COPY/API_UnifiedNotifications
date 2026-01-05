@@ -1,31 +1,23 @@
 /* eslint-disable prettier/prettier */
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { getRequest } from '../http';
 import { phoneNumberWithCountryCode, prepareMessage } from './lancola-sms.functions';
 import { SMSInterface } from './sms.interface';
 
-
-
 @Injectable()
 export class LancolaSmsService {
+  constructor(private readonly configService: ConfigService) {}
 
-
-    async sendSMS(payload: SMSInterface) {
-        return new Promise<any>(async (resolve, reject) => {
-            const phoneNumber = phoneNumberWithCountryCode({ phoneNumber: payload.phone, countryCode: '254' });
-            payload.phone = phoneNumber;
-            const finalURL = prepareMessage(payload);
-
-
-            getRequest(finalURL).then((response) => {
-console.log(response);
-
-                resolve(response);
-            });
-        })
-
+  async sendSMS(payload: SMSInterface) {
+    try {
+      const phoneNumber = phoneNumberWithCountryCode({ phoneNumber: payload.phone, countryCode: '254' });
+      payload.phone = phoneNumber;
+      const finalURL = prepareMessage(payload, this.configService);
+      const response = await getRequest(finalURL);
+      return response;
+    } catch (error) {
+      throw new BadRequestException(`Failed to send SMS: ${error.message}`);
     }
-
-
-
+  }
 }
