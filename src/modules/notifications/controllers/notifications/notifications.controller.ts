@@ -1,8 +1,9 @@
-import { Body, Controller, Post, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Post, UsePipes, ValidationPipe, UseGuards, Request } from '@nestjs/common';
 import { NotificationsService } from '../../services/notifications/notifications.service';
 import { NotificationPayload, NotificationType } from 'src/integrations/interfaces/notification.interface';
 import { IsEnum, IsNotEmpty, IsOptional, IsString, ValidateIf, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guards';
 
 class AttachmentDto {
   @IsString()
@@ -57,23 +58,27 @@ interface NotificationResult {
 }
 
 @Controller('notifications')
+@UseGuards(JwtAuthGuard)  // All notification endpoints now require auth
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   @Post('send')
   @UsePipes(new ValidationPipe({ transform: true }))
-  async sendNotification(@Body() payload: NotificationDto): Promise<NotificationResult | NotificationResult[]> {
+  async sendNotification(@Body() payload: NotificationDto, @Request() req): Promise<NotificationResult | NotificationResult[]> {
+    const orgId = req.user.orgId;
+
     if (Array.isArray(payload.to)) {
-      return this.notificationsService.sendNotificationToUsers(payload);
+      return this.notificationsService.sendNotificationToUsers(payload, orgId);
     } else {
-      await this.notificationsService.sendNotification(payload);
+      await this.notificationsService.sendNotification(payload, orgId);
       return { recipient: payload.to, status: 'success' };
     }
   }
 
   @Post('send-to-all')
   @UsePipes(new ValidationPipe({ transform: true }))
-  async sendNotificationToAllUsers(@Body() payload: NotificationDto): Promise<NotificationResult[]> {
-    return this.notificationsService.sendNotificationToAllUsers(payload);
+  async sendNotificationToAllUsers(@Body() payload: NotificationDto, @Request() req): Promise<NotificationResult[]> {
+    const orgId = req.user.orgId;
+    return this.notificationsService.sendNotificationToAllUsers(payload, orgId);
   }
 }

@@ -1,17 +1,15 @@
+// Update existing users.module.ts
 import { Global, Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { UsersController } from './controllers/users/users.controller';
 import { UsersService } from './services/users/users.service';
+import { UserSchema } from 'src/schemas/user.schema';
 
-const imports:any[] = [];
-const providers:any[] = [UsersService];
-
-
-@Module(
-  {
-    imports,
+@Module({
+  imports: [MongooseModule.forFeature([{ name: 'User', schema: UserSchema }])],
   controllers: [UsersController],
-  providers,
-  exports: imports.concat(providers),
+  providers: [UsersService],
+  exports: [UsersService],
 })
 @Global()
 export class UsersModule {}

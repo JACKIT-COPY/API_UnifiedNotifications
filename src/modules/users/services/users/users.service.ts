@@ -1,19 +1,24 @@
 import { Injectable } from '@nestjs/common';
-
-interface User {
-  phone: string;
-  email: string;
-}
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { User } from 'src/schemas/user.schema';
 
 @Injectable()
 export class UsersService {
-  getUsers(): User[] {
-    return [
-      { phone: '0759154322', email: 'user1@example.com' },
-      { phone: '0702173432', email: 'user2@example.com' },
-      { phone: '0708422044', email: 'user3@example.com' },
-      { phone: '0728504715', email: 'user4@example.com' },
-      { phone: '0748623870', email: 'user5@example.com' },
-    ];
+  constructor(@InjectModel('User') private userModel: Model<User>) {}
+
+  // orgId is now REQUIRED — no fallback in production
+  async getUsers(orgId: string): Promise<User[]> {
+    return this.userModel.find({ Organization: orgId }).exec();
+  }
+
+  // Helper methods we'll use later
+  async findByEmail(email: string) {
+    return this.userModel.findOne({ email }).exec();
+  }
+
+  async createUser(userData: Partial<User>) {
+    const user = new this.userModel(userData);
+    return user.save();
   }
 }
