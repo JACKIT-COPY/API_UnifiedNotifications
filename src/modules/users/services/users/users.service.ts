@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { User } from 'src/schemas/user.schema';
 
 @Injectable()
@@ -9,7 +9,7 @@ export class UsersService {
 
   // orgId is now REQUIRED — no fallback in production
   async getUsers(orgId: string): Promise<User[]> {
-    return this.userModel.find({ Organization: orgId }).exec();
+    return this.userModel.find({ organization: new Types.ObjectId(orgId) } as any).exec();
   }
 
   // Helper methods we'll use later

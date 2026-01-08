@@ -5,6 +5,8 @@ import { LancolaWhatsAppService } from 'src/integrations/lancola-whatsapp/servic
 import { UsersService } from 'src/modules/users/services/users/users.service';
 import { NotificationPayload, NotificationType } from 'src/integrations/interfaces/notification.interface';
 import { User } from 'src/schemas/user.schema';
+import { ContactsService } from 'src/modules/contacts/services/contacts/contacts.service';
+import { Contact } from 'src/schemas/contact.schema';
 
 interface NotificationResult {
   recipient: string;
@@ -15,6 +17,7 @@ interface NotificationResult {
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
+  ContactsService: any;
 
   constructor(
     private readonly lancolaSmsService: LancolaSmsService,
@@ -76,28 +79,26 @@ export class NotificationsService {
     return results;
   }
 
-  async sendNotificationToAllUsers(payload: NotificationPayload, orgId: string): Promise<NotificationResult[]> {
-    const users: User[] = await this.usersService.getUsers(orgId);
-    const results: NotificationResult[] = [];
+  // Update sendNotificationToAllUsers
+async sendNotificationToAllUsers(payload: NotificationPayload, orgId: string): Promise<NotificationResult[]> {
+  const contacts: Contact[] = await this.ContactsService.getContacts(orgId);
+  const results: NotificationResult[] = [];
 
-    for (const user of users) {
-      const recipient =
-        payload.type === NotificationType.SMS || payload.type === NotificationType.WHATSAPP
-          ? user.phoneNumber
-          : user.email;
+  for (const contact of contacts) {
+    const recipient =
+      payload.type === NotificationType.SMS || payload.type === NotificationType.WHATSAPP
+        ? contact.phone
+        : contact.email;
 
-      if (!recipient) {
-        results.push({ recipient: user.email, status: 'failed', error: 'No contact info' });
-        continue;
-      }
+    if (!recipient) continue;
 
-      try {
-        await this.sendNotification({ ...payload, to: recipient }, orgId);
-        results.push({ recipient, status: 'success' });
-      } catch (error) {
-        results.push({ recipient, status: 'failed', error: error.message });
-      }
+    try {
+      await this.sendNotification({ ...payload, to: recipient }, orgId);
+      results.push({ recipient, status: 'success' });
+    } catch (error) {
+      results.push({ recipient, status: 'failed', error: error.message });
     }
-    return results;
   }
+  return results;
+}
 }
