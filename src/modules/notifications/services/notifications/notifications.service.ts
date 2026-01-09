@@ -1,10 +1,10 @@
+// src/modules/notifications/services/notifications/notifications.service.ts
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { LancolaSmsService } from 'src/integrations/lancola-sms/services/lancola-sms/lancola-sms.service';
 import { LancolaEmailService } from 'src/integrations/lancola-email/services/lancola-email/lancola-email.service';
 import { LancolaWhatsAppService } from 'src/integrations/lancola-whatsapp/services/lancola-whatsapp/lancola-whatsapp.service';
 import { UsersService } from 'src/modules/users/services/users/users.service';
 import { NotificationPayload, NotificationType } from 'src/integrations/interfaces/notification.interface';
-import { User } from 'src/schemas/user.schema';
 import { ContactsService } from 'src/modules/contacts/services/contacts/contacts.service';
 import { Contact } from 'src/schemas/contact.schema';
 
@@ -17,13 +17,13 @@ interface NotificationResult {
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
-  ContactsService: any;
 
   constructor(
     private readonly lancolaSmsService: LancolaSmsService,
     private readonly lancolaEmailService: LancolaEmailService,
     private readonly lancolaWhatsAppService: LancolaWhatsAppService,
     private readonly usersService: UsersService,
+    private readonly contactsService: ContactsService,  // Added injection
   ) {}
 
   async sendNotification(payload: NotificationPayload, orgId: string): Promise<void> {
@@ -79,26 +79,28 @@ export class NotificationsService {
     return results;
   }
 
-  // Update sendNotificationToAllUsers
-async sendNotificationToAllUsers(payload: NotificationPayload, orgId: string): Promise<NotificationResult[]> {
-  const contacts: Contact[] = await this.ContactsService.getContacts(orgId);
-  const results: NotificationResult[] = [];
+  async sendNotificationToAllUsers(payload: NotificationPayload, orgId: string): Promise<NotificationResult[]> {
+    const contacts: Contact[] = await this.contactsService.getContacts(orgId);  // Fixed typo
+    const results: NotificationResult[] = [];
 
-  for (const contact of contacts) {
-    const recipient =
-      payload.type === NotificationType.SMS || payload.type === NotificationType.WHATSAPP
-        ? contact.phone
-        : contact.email;
+    for (const contact of contacts) {
+      const recipient =
+        payload.type === NotificationType.SMS || payload.type === NotificationType.WHATSAPP
+          ? contact.phone
+          : contact.email;
 
-    if (!recipient) continue;
+      if (!recipient) {
+        results.push({ recipient: '', status: 'failed', error: 'No contact info' });
+        continue;
+      }
 
-    try {
-      await this.sendNotification({ ...payload, to: recipient }, orgId);
-      results.push({ recipient, status: 'success' });
-    } catch (error) {
-      results.push({ recipient, status: 'failed', error: error.message });
+      try {
+        await this.sendNotification({ ...payload, to: recipient }, orgId);
+        results.push({ recipient, status: 'success' });
+      } catch (error) {
+        results.push({ recipient, status: 'failed', error: error.message });
+      }
     }
+    return results;
   }
-  return results;
-}
 }

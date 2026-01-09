@@ -1,3 +1,4 @@
+// src/modules/notifications/controllers/notifications/notifications.controller.ts
 import { Body, Controller, Post, UsePipes, ValidationPipe, UseGuards, Request } from '@nestjs/common';
 import { NotificationsService } from '../../services/notifications/notifications.service';
 import { NotificationPayload, NotificationType } from 'src/integrations/interfaces/notification.interface';
