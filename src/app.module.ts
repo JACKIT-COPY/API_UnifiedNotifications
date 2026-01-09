@@ -9,6 +9,7 @@ import { ContactsModule } from './modules/contacts/contacts.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { LancolaSmsModule } from './integrations/lancola-sms/lancola-sms.module';
+import { MessageLogsModule } from './modules/messages-logs/message-logs.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { LancolaSmsModule } from './integrations/lancola-sms/lancola-sms.module'
     GroupsModule,
     ContactsModule,
     LancolaSmsModule,
+    MessageLogsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

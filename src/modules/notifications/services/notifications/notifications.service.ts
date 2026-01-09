@@ -4,9 +4,13 @@ import { LancolaSmsService } from 'src/integrations/lancola-sms/services/lancola
 import { LancolaEmailService } from 'src/integrations/lancola-email/services/lancola-email/lancola-email.service';
 import { LancolaWhatsAppService } from 'src/integrations/lancola-whatsapp/services/lancola-whatsapp/lancola-whatsapp.service';
 import { UsersService } from 'src/modules/users/services/users/users.service';
-import { NotificationPayload, NotificationType } from 'src/integrations/interfaces/notification.interface';
+import {
+  NotificationPayload,
+  NotificationType,
+} from 'src/integrations/interfaces/notification.interface';
 import { ContactsService } from 'src/modules/contacts/services/contacts/contacts.service';
 import { Contact } from 'src/schemas/contact.schema';
+import { MessageLogsService } from 'src/modules/messages-logs/services/message-logs/message-logs.service';
 
 interface NotificationResult {
   recipient: string;
@@ -23,27 +27,61 @@ export class NotificationsService {
     private readonly lancolaEmailService: LancolaEmailService,
     private readonly lancolaWhatsAppService: LancolaWhatsAppService,
     private readonly usersService: UsersService,
-    private readonly contactsService: ContactsService,  // Added injection
+    private readonly contactsService: ContactsService, // Added injection
+    private readonly messageLogsService: MessageLogsService,
   ) {}
 
-  async sendNotification(payload: NotificationPayload, orgId: string): Promise<void> {
-    this.logger.log(`Sending ${payload.type} notification to ${payload.to} (org: ${orgId})`);
+  async sendNotification(
+    payload: NotificationPayload,
+    orgId: string,
+    userId: string,
+  ): Promise<void> {
+    this.logger.log(
+      `Sending ${payload.type} notification to ${payload.to} (org: ${orgId})`,
+    );
+    // Normalize recipient to string for logging
+    const recipient = Array.isArray(payload.to) ? payload.to[0] : payload.to;
+
+    // Map channel to a human-friendly provider/network name
+    const networkForChannel = (type: NotificationType) => {
+      switch (type) {
+        case NotificationType.SMS:
+          return 'Lancola SMS';
+        case NotificationType.EMAIL:
+          return 'Lancola Email';
+        case NotificationType.WHATSAPP:
+          return 'Lancola WhatsApp';
+        default:
+          return 'Unknown Provider';
+      }
+    };
+
+    let providerResponse: any = undefined;
     try {
       switch (payload.type) {
         case NotificationType.SMS:
           if (!payload.message) {
-            throw new BadRequestException('Message is required for SMS notifications');
+            throw new BadRequestException(
+              'Message is required for SMS notifications',
+            );
           }
-          await this.lancolaSmsService.sendSMS({ phone: payload.to as string, message: payload.message });
+          providerResponse = await this.lancolaSmsService.sendSMS({
+            phone: payload.to as string,
+            message: payload.message,
+          });
           break;
         case NotificationType.EMAIL:
           if (!payload.subject) {
-            throw new BadRequestException('Subject is required for email notifications');
+            throw new BadRequestException(
+              'Subject is required for email notifications',
+            );
           }
           if (!payload.message) {
-            throw new BadRequestException('Message is required for email notifications');
+            throw new BadRequestException(
+              'Message is required for email notifications',
+            );
           }
-          await this.lancolaEmailService.sendEmail({
+          providerResponse = await this.lancolaEmailService.sendEmail({
             to: payload.to,
             subject: payload.subject,
             message: payload.message,
@@ -52,25 +90,75 @@ export class NotificationsService {
           });
           break;
         case NotificationType.WHATSAPP:
-          await this.lancolaWhatsAppService.sendWhatsApp({ to: payload.to as string });
+          providerResponse = await this.lancolaWhatsAppService.sendWhatsApp({
+            to: payload.to as string,
+          });
           break;
         default:
-          throw new BadRequestException('Invalid or unsupported notification type');
+          throw new BadRequestException(
+            'Invalid or unsupported notification type',
+          );
       }
+
+      // After successful send, persist a success log (include provider response when available)
+      await this.messageLogsService.logMessage(
+        payload.type,
+        userId,
+        orgId,
+        networkForChannel(payload.type),
+        [
+          {
+            recipient,
+            status: 'success',
+            response: providerResponse ? JSON.stringify(providerResponse) : undefined,
+          },
+        ],
+        payload.message?.substring(0, 100) || '',
+        payload.message?.length || 0,
+        1,
+        // payload.attachments?.filter((a) => a.contentType).map((a) => ({ filename: a.filename, contentType: a.contentType })),
+      );
+
       this.logger.log(`Successfully sent ${payload.type} to ${payload.to}`);
     } catch (error) {
+      // Log failure before rethrowing so calling code can still respond accordingly
+      try {
+        await this.messageLogsService.logMessage(
+          payload.type,
+          userId,
+          orgId,
+          networkForChannel(payload.type),
+          [
+            {
+              recipient,
+              status: 'failed',
+              error: error?.message || String(error),
+            },
+          ],
+          payload.message?.substring(0, 100) || '',
+          payload.message?.length || 0,
+          0,
+        );
+      } catch (logError) {
+        this.logger.error(`Failed to persist failure log: ${logError?.message || logError}`);
+      }
+
       this.logger.error(`Failed to send ${payload.type}: ${error.message}`);
       throw error;
     }
   }
 
-  async sendNotificationToUsers(payload: NotificationPayload, orgId: string): Promise<NotificationResult[]> {
+  async sendNotificationToUsers(
+    payload: NotificationPayload,
+    orgId: string,
+    userId: string,
+  ): Promise<NotificationResult[]> {
     const recipients = Array.isArray(payload.to) ? payload.to : [payload.to];
     const results: NotificationResult[] = [];
 
     for (const recipient of recipients) {
       try {
-        await this.sendNotification({ ...payload, to: recipient }, orgId);
+        await this.sendNotification({ ...payload, to: recipient }, orgId, userId);
         results.push({ recipient, status: 'success' });
       } catch (error) {
         results.push({ recipient, status: 'failed', error: error.message });
@@ -79,23 +167,32 @@ export class NotificationsService {
     return results;
   }
 
-  async sendNotificationToAllUsers(payload: NotificationPayload, orgId: string): Promise<NotificationResult[]> {
-    const contacts: Contact[] = await this.contactsService.getContacts(orgId);  // Fixed typo
+  async sendNotificationToAllUsers(
+    payload: NotificationPayload,
+    orgId: string,
+    userId: string,
+  ): Promise<NotificationResult[]> {
+    const contacts: Contact[] = await this.contactsService.getContacts(orgId); // Fixed typo
     const results: NotificationResult[] = [];
 
     for (const contact of contacts) {
       const recipient =
-        payload.type === NotificationType.SMS || payload.type === NotificationType.WHATSAPP
+        payload.type === NotificationType.SMS ||
+        payload.type === NotificationType.WHATSAPP
           ? contact.phone
           : contact.email;
 
       if (!recipient) {
-        results.push({ recipient: '', status: 'failed', error: 'No contact info' });
+        results.push({
+          recipient: '',
+          status: 'failed',
+          error: 'No contact info',
+        });
         continue;
       }
 
       try {
-        await this.sendNotification({ ...payload, to: recipient }, orgId);
+        await this.sendNotification({ ...payload, to: recipient }, orgId, userId);
         results.push({ recipient, status: 'success' });
       } catch (error) {
         results.push({ recipient, status: 'failed', error: error.message });

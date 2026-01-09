@@ -7,6 +7,7 @@ import { NotificationsController } from './controllers/notifications/notificatio
 import { LancolaSmsModule } from 'src/integrations/lancola-sms/lancola-sms.module';
 import { LancolaEmailModule } from 'src/integrations/lancola-email/lancola-email.module';
 import { LancolaWhatsAppModule } from 'src/integrations/lancola-whatsapp/lancola-whatsapp.module';
+import { MessageLogsModule } from '../messages-logs/message-logs.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { LancolaWhatsAppModule } from 'src/integrations/lancola-whatsapp/lancola
     LancolaSmsModule,
     LancolaEmailModule,
     LancolaWhatsAppModule,
+    MessageLogsModule,
   ],
   controllers: [NotificationsController],
   providers: [NotificationsService],

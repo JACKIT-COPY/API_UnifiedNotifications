@@ -67,11 +67,12 @@ export class NotificationsController {
   @UsePipes(new ValidationPipe({ transform: true }))
   async sendNotification(@Body() payload: NotificationDto, @Request() req): Promise<NotificationResult | NotificationResult[]> {
     const orgId = req.user.orgId;
+    const userId = req.user.userId;
 
     if (Array.isArray(payload.to)) {
-      return this.notificationsService.sendNotificationToUsers(payload, orgId);
+      return this.notificationsService.sendNotificationToUsers(payload, orgId, userId);
     } else {
-      await this.notificationsService.sendNotification(payload, orgId);
+      await this.notificationsService.sendNotification(payload, orgId, userId);
       return { recipient: payload.to, status: 'success' };
     }
   }
@@ -80,6 +81,7 @@ export class NotificationsController {
   @UsePipes(new ValidationPipe({ transform: true }))
   async sendNotificationToAllUsers(@Body() payload: NotificationDto, @Request() req): Promise<NotificationResult[]> {
     const orgId = req.user.orgId;
-    return this.notificationsService.sendNotificationToAllUsers(payload, orgId);
+    const userId = req.user.userId;
+    return this.notificationsService.sendNotificationToAllUsers(payload, orgId, userId);
   }
 }
