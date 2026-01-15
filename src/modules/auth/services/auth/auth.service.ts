@@ -29,7 +29,7 @@ export class AuthService {
     await org.save();
     await user.save();
 
-    const token = this.jwtService.sign({ userId: user._id, orgId: org._id });
+    const token = this.jwtService.sign({ userId: user._id, orgId: org._id, role: user.role });
     return { token, user };
   }
 
@@ -37,7 +37,7 @@ export class AuthService {
     const user = await this.userModel.findOne({ email });
     if (!user || !(await bcrypt.compare(password, user.password))) throw new BadRequestException('Invalid credentials');
 
-    const token = this.jwtService.sign({ userId: user._id, orgId: user.organization });
+    const token = this.jwtService.sign({ userId: user._id, orgId: user.organization, role: user.role });
     return { token, user };
   }
 

@@ -1,9 +1,11 @@
-// src/schemas/user.schema.ts (new file)
+// src/schemas/user.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
+
+export type UserDocument = HydratedDocument<User>;
 
 @Schema({ timestamps: true })
-export class User extends Document {
+export class User {
   @Prop({ required: true })
   firstName: string;
 
@@ -14,7 +16,7 @@ export class User extends Document {
   email: string;
 
   @Prop({ required: true })
-  password: string;  // Hashed
+  password: string; // Hashed
 
   @Prop({ required: true })
   countryCode: string;
@@ -25,8 +27,15 @@ export class User extends Document {
   @Prop({ required: true, enum: ['admin', 'user'] })
   role: string;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Organization', required: true })
-  organization: MongooseSchema.Types.ObjectId;
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'Organization',
+    required: true,
+  })
+  organization: Types.ObjectId;
+
+  @Prop({ default: true })
+  isActive: boolean; // Soft delete / deactivation flag
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

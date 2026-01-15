@@ -4,7 +4,7 @@ import { NotificationsService } from '../../services/notifications/notifications
 import { NotificationPayload, NotificationType } from 'src/integrations/interfaces/notification.interface';
 import { IsEnum, IsNotEmpty, IsOptional, IsString, ValidateIf, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guards';
+import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 
 class AttachmentDto {
   @IsString()
