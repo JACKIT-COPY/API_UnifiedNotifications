@@ -8,7 +8,7 @@ import * as bcrypt from 'bcrypt';
 @Injectable()
 export class UsersService {
 
-  private readonly logger = new Logger(UsersService.name);
+  private readonly logger = new Logger(UsersService.name); 
 
   constructor(@InjectModel('User') private userModel: Model<User>) {}
 
@@ -28,6 +28,7 @@ export class UsersService {
   async getUserById(id: string, orgId: string): Promise<User> {
     const user = await this.userModel
       .findOne({ _id: new Types.ObjectId(id), organization: new Types.ObjectId(orgId) })
+      .populate('organization')   // ← Add this line!
       .select('-password')
       .exec();
     if (!user) throw new NotFoundException('User not found');
