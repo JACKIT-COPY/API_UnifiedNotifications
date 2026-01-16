@@ -16,7 +16,7 @@ export class User {
   email: string;
 
   @Prop({ required: true })
-  password: string; // Hashed
+  password: string; // Hashed // Required only on create
 
   @Prop({ required: true })
   countryCode: string;

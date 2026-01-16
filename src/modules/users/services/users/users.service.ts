@@ -1,5 +1,11 @@
 // src/modules/users/services/users/users.service.ts
-import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  Logger,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { User } from 'src/schemas/user.schema';
@@ -7,8 +13,7 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
-
-  private readonly logger = new Logger(UsersService.name); 
+  private readonly logger = new Logger(UsersService.name);
 
   constructor(@InjectModel('User') private userModel: Model<User>) {}
 
@@ -16,19 +21,21 @@ export class UsersService {
     this.logger.log(`Fetching users for organization: ${orgId}`);
 
     const users = await this.userModel
-      .find({ organization: new Types.ObjectId(orgId), isActive: true })
+      .find({ organization: new Types.ObjectId(orgId) }) // isActive no enforced
       .select('-password') // Never return password
       .exec();
 
-      this.logger.log(`Found ${users.length} users for organization: ${orgId}`);
+    this.logger.log(`Found ${users.length} users for organization: ${orgId}`);
     return users;
-
   }
 
   async getUserById(id: string, orgId: string): Promise<User> {
     const user = await this.userModel
-      .findOne({ _id: new Types.ObjectId(id), organization: new Types.ObjectId(orgId) })
-      .populate('organization')   // ← Add this line!
+      .findOne({
+        _id: new Types.ObjectId(id),
+        organization: new Types.ObjectId(orgId),
+      })
+      .populate('organization') // ← Add this line!
       .select('-password')
       .exec();
     if (!user) throw new NotFoundException('User not found');
@@ -39,7 +46,10 @@ export class UsersService {
     const existing = await this.userModel.findOne({ email: userData.email });
     if (existing) throw new BadRequestException('Email already exists');
 
-    const hashedPassword = await bcrypt.hash(userData.password || 'default123', 10);
+    const hashedPassword = await bcrypt.hash(
+      userData.password || 'default123',
+      10,
+    );
     const user = new this.userModel({
       ...userData,
       password: hashedPassword,
@@ -51,7 +61,11 @@ export class UsersService {
     return user.save();
   }
 
-  async updateUser(id: string, updateData: Partial<User>, orgId: string): Promise<User> {
+  async updateUser(
+    id: string,
+    updateData: Partial<User>,
+    orgId: string,
+  ): Promise<User> {
     const user = await this.userModel.findOne({
       _id: new Types.ObjectId(id),
       organization: new Types.ObjectId(orgId),
@@ -59,8 +73,12 @@ export class UsersService {
 
     if (!user) throw new NotFoundException('User not found');
 
+    // Only hash and set password if explicitly provided
     if (updateData.password) {
       updateData.password = await bcrypt.hash(updateData.password, 10);
+    } else {
+      // Prevent overwriting existing password with undefined/null
+      delete updateData.password;
     }
 
     Object.assign(user, updateData);
@@ -74,7 +92,8 @@ export class UsersService {
     });
 
     if (!user) throw new NotFoundException('User not found');
-    if (!user.isActive) throw new BadRequestException('User already deactivated');
+    if (!user.isActive)
+      throw new BadRequestException('User already deactivated');
 
     user.isActive = false;
     return user.save();
@@ -103,6 +122,42 @@ export class UsersService {
 
     await user.deleteOne();
   }
+
+  // src/modules/users/services/users/users.service.ts
+async changePassword(
+  targetUserId: string,
+  oldPassword: string,
+  newPassword: string,
+  requesterUserId: string,
+  requesterOrgId: string,
+  isAdminReset: boolean = false, // Optional: if admin can reset without old password
+): Promise<User> {
+  const targetUser = await this.userModel.findOne({
+    _id: new Types.ObjectId(targetUserId),
+    organization: new Types.ObjectId(requesterOrgId),
+  });
+
+  if (!targetUser) throw new NotFoundException('User not found');
+
+  // Security: Regular user can only change their own password
+  if (requesterUserId !== targetUserId && !isAdminReset) {
+    throw new ForbiddenException('You can only change your own password');
+  }
+
+  // Require old password unless admin reset
+  if (!isAdminReset) {
+    const isMatch = await bcrypt.compare(oldPassword, targetUser.password);
+    if (!isMatch) throw new BadRequestException('Current password is incorrect');
+  }
+
+  // Validate new password (optional: add length/strength check)
+  if (!newPassword || newPassword.length < 8) {
+    throw new BadRequestException('New password must be at least 8 characters');
+  }
+
+  targetUser.password = await bcrypt.hash(newPassword, 10);
+  return targetUser.save();
+}
 
   async findByEmail(email: string): Promise<User | null> {
     return this.userModel.findOne({ email }).exec();
