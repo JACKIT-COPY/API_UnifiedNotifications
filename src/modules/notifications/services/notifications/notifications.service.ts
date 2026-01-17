@@ -27,7 +27,7 @@ export class NotificationsService {
     private readonly lancolaEmailService: LancolaEmailService,
     private readonly lancolaWhatsAppService: LancolaWhatsAppService,
     private readonly usersService: UsersService,
-    private readonly contactsService: ContactsService, // Added injection
+    private readonly contactsService: ContactsService,
     private readonly messageLogsService: MessageLogsService,
   ) {}
 
@@ -37,12 +37,13 @@ export class NotificationsService {
     userId: string,
   ): Promise<void> {
     this.logger.log(
-      `Sending ${payload.type} notification to ${payload.to} (org: ${orgId})`,
+      `Sending ${payload.type} notification to ${payload.to} (org: ${orgId}, user: ${userId})`,
     );
-    // Normalize recipient to string for logging
+
+    // Normalize recipient for logging (first one if array)
     const recipient = Array.isArray(payload.to) ? payload.to[0] : payload.to;
 
-    // Map channel to a human-friendly provider/network name
+    // Map channel to provider name for logging
     const networkForChannel = (type: NotificationType) => {
       switch (type) {
         case NotificationType.SMS:
@@ -57,50 +58,55 @@ export class NotificationsService {
     };
 
     let providerResponse: any = undefined;
+
     try {
       switch (payload.type) {
         case NotificationType.SMS:
           if (!payload.message) {
-            throw new BadRequestException(
-              'Message is required for SMS notifications',
-            );
+            throw new BadRequestException('Message is required for SMS notifications');
           }
-          providerResponse = await this.lancolaSmsService.sendSMS({
-            phone: payload.to as string,
-            message: payload.message,
-          });
+          providerResponse = await this.lancolaSmsService.sendSMS(
+            {
+              phone: payload.to as string,
+              message: payload.message,
+            },
+            orgId  // ← FIXED: pass orgId
+          );
           break;
+
         case NotificationType.EMAIL:
           if (!payload.subject) {
-            throw new BadRequestException(
-              'Subject is required for email notifications',
-            );
+            throw new BadRequestException('Subject is required for email notifications');
           }
           if (!payload.message) {
-            throw new BadRequestException(
-              'Message is required for email notifications',
-            );
+            throw new BadRequestException('Message is required for email notifications');
           }
-          providerResponse = await this.lancolaEmailService.sendEmail({
-            to: payload.to,
-            subject: payload.subject,
-            message: payload.message,
-            templateId: payload.templateId,
-            attachments: payload.attachments,
-          });
-          break;
-        case NotificationType.WHATSAPP:
-          providerResponse = await this.lancolaWhatsAppService.sendWhatsApp({
-            to: payload.to as string,
-          });
-          break;
-        default:
-          throw new BadRequestException(
-            'Invalid or unsupported notification type',
+          providerResponse = await this.lancolaEmailService.sendEmail(
+            {
+              to: payload.to,
+              subject: payload.subject,
+              message: payload.message,
+              templateId: payload.templateId,
+              attachments: payload.attachments,
+            },
+            orgId  // ← FIXED: pass orgId
           );
+          break;
+
+        case NotificationType.WHATSAPP:
+          providerResponse = await this.lancolaWhatsAppService.sendWhatsApp(
+            {
+              to: payload.to as string,
+            },
+            orgId  // ← FIXED: pass orgId
+          );
+          break;
+
+        default:
+          throw new BadRequestException('Invalid or unsupported notification type');
       }
 
-      // After successful send, persist a success log (include provider response when available)
+      // Log success
       await this.messageLogsService.logMessage(
         payload.type,
         userId,
@@ -115,13 +121,13 @@ export class NotificationsService {
         ],
         payload.message?.substring(0, 100) || '',
         payload.message?.length || 0,
-        1,
-        // payload.attachments?.filter((a) => a.contentType).map((a) => ({ filename: a.filename, contentType: a.contentType })),
+        1, // cost
+        // payload.attachments?.map(a => ({ filename: a.filename, contentType: a.contentType })),
       );
 
-      this.logger.log(`Successfully sent ${payload.type} to ${payload.to}`);
+      this.logger.log(`Successfully sent ${payload.type} to ${recipient}`);
     } catch (error) {
-      // Log failure before rethrowing so calling code can still respond accordingly
+      // Log failure
       try {
         await this.messageLogsService.logMessage(
           payload.type,
@@ -137,13 +143,13 @@ export class NotificationsService {
           ],
           payload.message?.substring(0, 100) || '',
           payload.message?.length || 0,
-          0,
+          0, // no cost on failure
         );
       } catch (logError) {
-        this.logger.error(`Failed to persist failure log: ${logError?.message || logError}`);
+        this.logger.error(`Failed to log failure: ${logError?.message || logError}`);
       }
 
-      this.logger.error(`Failed to send ${payload.type}: ${error.message}`);
+      this.logger.error(`Failed to send ${payload.type} to ${recipient}: ${error.message}`);
       throw error;
     }
   }
@@ -172,22 +178,17 @@ export class NotificationsService {
     orgId: string,
     userId: string,
   ): Promise<NotificationResult[]> {
-    const contacts: Contact[] = await this.contactsService.getContacts(orgId); // Fixed typo
+    const contacts: Contact[] = await this.contactsService.getContacts(orgId);
     const results: NotificationResult[] = [];
 
     for (const contact of contacts) {
       const recipient =
-        payload.type === NotificationType.SMS ||
-        payload.type === NotificationType.WHATSAPP
+        payload.type === NotificationType.SMS || payload.type === NotificationType.WHATSAPP
           ? contact.phone
           : contact.email;
 
       if (!recipient) {
-        results.push({
-          recipient: '',
-          status: 'failed',
-          error: 'No contact info',
-        });
+        results.push({ recipient: '', status: 'failed', error: 'No contact info' });
         continue;
       }
 

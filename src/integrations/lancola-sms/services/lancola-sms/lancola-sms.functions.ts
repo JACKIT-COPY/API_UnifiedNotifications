@@ -3,8 +3,15 @@ import { ConfigService } from '@nestjs/config';
 import { getLancolaSmsConfig } from '../../lancola-sms.config';
 import { SMSInterface } from './sms.interface';
 
-export function prepareMessage(payload: SMSInterface, configService: ConfigService) {
-  const config = getLancolaSmsConfig(configService);
+// src/integrations/lancola-sms/services/lancola-sms/lancola-sms.functions.ts
+export interface LancolaSmsConfig {
+  API_URL: string;
+  API_KEY: string;
+  PARTNER_ID: string;
+  SHORT_CODE: string;
+}
+
+export function prepareMessage(payload: SMSInterface, config: LancolaSmsConfig): string {
   const { phone, message } = payload;
   const preparedMessage = `${config.API_URL}${config.API_KEY}&partnerID=${encodeURIComponent(config.PARTNER_ID)}&message=${encodeURIComponent(message)}&shortcode=${encodeURIComponent(config.SHORT_CODE)}&mobile=${phone}`;
   return preparedMessage;

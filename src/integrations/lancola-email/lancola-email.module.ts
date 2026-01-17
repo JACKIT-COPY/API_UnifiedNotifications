@@ -2,10 +2,11 @@ import { Module } from '@nestjs/common';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LancolaEmailService } from './services/lancola-email/lancola-email.service';
+import { OrganizationsModule } from 'src/modules/organizations/organizations.module';
 
 @Module({
   imports: [
-    ConfigModule,
+    ConfigModule, OrganizationsModule,
     MailerModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
