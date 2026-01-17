@@ -16,6 +16,9 @@ export class Organization extends Document {
   @Prop({ default: 0 })
   credits: number; // For future
 
+  @Prop({ type: String, default: null })
+  emailFromName: string; // overrides org.name
+
   // ── NEW: Per-org credentials (optional, falls back to .env) ──
   @Prop({ type: Object, default: {} })
   credentials: Record<string, string>;

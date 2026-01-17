@@ -12,10 +12,11 @@ export class LancolaEmailService {
     const org = await this.organizationsService.getById(orgId);
     const creds = org.credentials || {};
 
-    const host = creds.email_host || process.env.EMAIL_HOST;
-    const port = Number(creds.email_port || process.env.EMAIL_PORT);
-    const user = creds.email_user || process.env.EMAIL_USER;
-    const pass = creds.email_pass || process.env.EMAIL_PASS;
+    const host = creds.email_host || process.env.EMAIL_HOST || '';
+    const port = Number(creds.email_port || process.env.EMAIL_PORT || '587');
+    const user = creds.email_user || process.env.EMAIL_USER || '';
+    const pass = creds.email_pass || process.env.EMAIL_PASS || '';
+    const fromEmail = creds.email_from || process.env.EMAIL_USER || user; // fallback
 
     if (!host || !user || !pass) {
       throw new InternalServerErrorException('Missing required email credentials');
@@ -24,14 +25,22 @@ export class LancolaEmailService {
     const transporter = nodemailer.createTransport({
       host,
       port,
-      secure: false,
+      secure: port === 465, // implicit SSL only on 465
       auth: { user, pass },
+      tls: { rejectUnauthorized: false }, // common for self-signed cPanel certs
+      connectionTimeout: 30000,
+      greetingTimeout: 30000,
+      socketTimeout: 30000,
     });
 
     const isHtml = payload.message && /<[^>]+>/.test(payload.message);
 
+    // ── Dynamic From Name ──
+    const fromName = org.emailFromName || org.name || 'NotifyHub'; // Org name or fallback
+    const fromField = `"${fromName}" <${fromEmail}>`;
+
     const mailOptions: any = {
-      from: user,
+      from: fromField,  // ← This line makes it dynamic
       to: payload.to,
       subject: payload.subject,
       ...(isHtml
