@@ -14,6 +14,9 @@ export class Campaign extends Document {
   @Prop({ enum: ['broadcast', 'targeted', 'automated', 'recurring'], required: true })
   type: string;
 
+  @Prop({ type: [String], default: [] })
+  tags: string[];
+
   @Prop({ type: [String], enum: NotificationType, default: [] })
   channels: NotificationType[];
 
@@ -26,17 +29,23 @@ export class Campaign extends Document {
   @Prop({ enum: ['draft', 'scheduled', 'active', 'completed', 'canceled'], default: 'draft' })
   status: string;
 
-  @Prop({ type: [String], default: [] })  // Contact IDs
-  recipients: string[];
+  @Prop({ enum: ['all', 'selected', 'group', 'segments'], default: 'all' })
+  recipientType: string;
 
-  @Prop({ type: String })  // Group ID if targeted
-  groupId?: string;
+  @Prop({ type: [String], default: [] })  // Contact IDs if recipientType = 'selected'
+  selectedContacts: string[];
+
+  @Prop({ type: String })  // Group ID if recipientType = 'group'
+  selectedGroup?: string;
+
+  @Prop({ type: Object, default: {} })  // For segments – future (e.g., filter query)
+  selectedSegment?: Record<string, any>;
 
   @Prop({ type: Object, default: {} })  // Per-channel messages
   messages: Record<string, { subject?: string; content: string; attachments?: any[] }>;
 
   @Prop({ type: Date })
-  scheduleDate?: Date;
+  scheduleDate?: Date;  // Combined date + time
 
   @Prop({ default: false })
   saveAsDraft: boolean;
