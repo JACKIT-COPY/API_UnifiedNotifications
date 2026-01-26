@@ -8,9 +8,11 @@ import { MessageLogsService } from 'src/modules/messages-logs/services/message-l
 import { ContactsService } from 'src/modules/contacts/services/contacts/contacts.service';
 import { Cron } from '@nestjs/schedule';
 import { NotificationType } from 'src/integrations/interfaces/notification.interface';
+import { Contact } from 'src/schemas/contact.schema';
 
 @Injectable()
 export class CampaignsService {
+  [x: string]: any;
   constructor(
     @InjectModel('Campaign') private campaignModel: Model<Campaign>,
     private notificationsService: NotificationsService,
@@ -18,15 +20,31 @@ export class CampaignsService {
     private contactsService: ContactsService,
   ) {}
 
-  async createCampaign(
-    data: any,
-    orgId: string,
-    userId: string,
-  ): Promise<Campaign> {
-    // Combine scheduleDate + scheduleTime if provided
-    if (data.scheduleDate && data.scheduleTime) {
+  async createCampaign(data: any, orgId: string, userId: string): Promise<Campaign> {
+    // Map frontend recipients structure to backend
+    if (data.recipients) {
+      if (data.recipients.groups.length > 0) {
+        data.recipientType = 'group';
+        data.selectedGroup = data.recipients.groups[0];  // Assume first group, or handle multiple
+      } else if (data.recipients.contacts.length > 0) {
+        data.recipientType = 'selected';
+        data.selectedContacts = data.recipients.contacts;
+      } else if (data.recipients.manual.length > 0) {
+        data.recipientType = 'selected';
+        data.selectedContacts = [];  // Manual not supported yet – convert to contacts?
+      } else {
+        data.recipientType = 'all';
+      }
+      delete data.recipients;  // Clean up
+    }
+
+    // Combine schedule
+    if (data.scheduling?.type === 'immediate') {
+      data.scheduleDate = null;
+    } else if (data.scheduling?.type === 'scheduled' && data.scheduleDate && data.scheduleTime) {
       data.scheduleDate = new Date(`${data.scheduleDate}T${data.scheduleTime}`);
     }
+    delete data.scheduling;
 
     const campaign = new this.campaignModel({
       ...data,
@@ -96,61 +114,42 @@ export class CampaignsService {
     return campaign;
   }
 
-  private async executeCampaign(
-    campaign: Campaign,
-    orgId: string,
-    userId: string,
-  ) {
-    let recipients: string[] = [];
+  private async executeCampaign(campaign: Campaign, orgId: string, userId: string) {
+    let contacts: Contact[] = [];
 
     if (campaign.recipientType === 'all') {
-      const contacts = await this.contactsService.getContacts(orgId);
-      recipients = contacts.map((c) => c.phone || c.email).filter(Boolean);
+      contacts = await this.contactsService.getContacts(orgId);
     } else if (campaign.recipientType === 'selected') {
-      if (!campaign.selectedContacts?.length) {
-        throw new BadRequestException('No selected contacts for this campaign');
-      }
-      const contacts = await this.contactsService.getContactsByIds(
-        campaign.selectedContacts,
-        orgId,
-      );
-      recipients = contacts.map((c) => c.phone || c.email).filter(Boolean);
+      contacts = await this.contactsService.getContactsByIds(campaign.selectedContacts, orgId);
     } else if (campaign.recipientType === 'group') {
-      if (!campaign.selectedGroup) {
-        throw new BadRequestException('No group selected for this campaign');
-      }
-      // Type guard: campaign.selectedGroup is guaranteed to be string here
-      const contacts = await this.contactsService.getContactsByGroup(
-        campaign.selectedGroup,
-        orgId,
-      );
-      recipients = contacts
-        .map((c) => {
-          // Channel-specific recipient logic
-          if (
-            campaign.channels.includes(NotificationType.SMS) ||
-            campaign.channels.includes(NotificationType.WHATSAPP)
-          ) {
-            return c.phone;
-          }
-          return c.email;
-        })
-        .filter(Boolean);
+      if (!campaign.selectedGroup) throw new BadRequestException('No group selected');
+      contacts = await this.contactsService.getContactsByGroup(campaign.selectedGroup, orgId);
     } else if (campaign.recipientType === 'segments') {
-      throw new BadRequestException(
-        'Segment-based sending not implemented yet',
-      );
+      throw new BadRequestException('Segments not implemented yet');
     } else {
       throw new BadRequestException('Invalid recipient type');
     }
 
-    if (recipients.length === 0) {
-      throw new BadRequestException('No valid recipients found');
+    if (contacts.length === 0) {
+      throw new BadRequestException('No valid contacts found');
     }
 
     for (const channel of campaign.channels) {
       const channelMessage = campaign.messages[channel];
       if (!channelMessage) continue;
+
+      // Channel-specific recipients
+      let recipients: string[] = [];
+      if (channel === NotificationType.SMS || channel === NotificationType.WHATSAPP) {
+        recipients = contacts.map(c => c.phone).filter(Boolean);
+      } else if (channel === NotificationType.EMAIL) {
+        recipients = contacts.map(c => c.email).filter(Boolean);
+      }
+
+      if (recipients.length === 0) {
+        this.logger.warn(`No recipients for channel ${channel} in campaign ${campaign._id}`);
+        continue;
+      }
 
       const payload = {
         type: channel,
@@ -160,11 +159,7 @@ export class CampaignsService {
         attachments: channelMessage.attachments,
       };
 
-      await this.notificationsService.sendNotificationToUsers(
-        payload,
-        orgId,
-        userId,
-      );
+      await this.notificationsService.sendNotificationToUsers(payload, orgId, userId);
     }
 
     await this.updateAnalytics(campaign._id.toString(), orgId);
