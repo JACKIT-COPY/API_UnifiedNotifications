@@ -1,3 +1,4 @@
+// src/schemas/message-log.schema.ts (update to add campaignId)
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 import { NotificationType } from 'src/integrations/interfaces/notification.interface';
@@ -14,29 +15,31 @@ export class MessageLog extends Document {
   senderOrgId: MongooseSchema.Types.ObjectId;
 
   @Prop({ required: true })
-  network: string;  // e.g., "Lancola SMS", "Gmail SMTP", "Meta WhatsApp"
+  network: string;
 
   @Prop([
     {
       recipient: { type: String, required: true },
       status: { type: String, enum: ['success', 'failed', 'pending'], default: 'pending' },
       error: { type: String },
-      response: { type: String },
     },
   ])
-  recipients: { recipient: string; status: string; error?: string; response?: string }[];
+  recipients: { recipient: string; status: string; error?: string }[];
 
   @Prop({ required: true })
-  messagePreview: string;  // Truncated message (first 100 chars)
+  messagePreview: string;
 
   @Prop({ required: true })
-  messageLength: number;  // Char count
+  messageLength: number;
 
   @Prop([{ filename: String, contentType: String }])
-  attachments?: { filename: string; contentType: string }[];  // For email
+  attachments?: { filename: string; contentType: string }[];
 
   @Prop({ default: 0 })
-  cost: number;  // Credits used
+  cost: number;
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Campaign', default: null })  // ← New field for linking to campaign
+  campaignId?: MongooseSchema.Types.ObjectId;
 }
 
 export const MessageLogSchema = SchemaFactory.createForClass(MessageLog);

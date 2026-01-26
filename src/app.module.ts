@@ -11,6 +11,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { LancolaSmsModule } from './integrations/lancola-sms/lancola-sms.module';
 import { MessageLogsModule } from './modules/messages-logs/message-logs.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
+import { CampaignsModule } from './modules/campaigns/campaigns.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
     LancolaSmsModule,
     OrganizationsModule,
     MessageLogsModule,
+    CampaignsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
