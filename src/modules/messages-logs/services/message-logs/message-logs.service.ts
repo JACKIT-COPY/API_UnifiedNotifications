@@ -1,6 +1,7 @@
+// src/modules/message-logs/services/message-logs/message-logs.service.ts (add getLogsForCampaign)
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { MessageLog } from 'src/schemas/message-log.schema';
 import { NotificationType } from 'src/integrations/interfaces/notification.interface';
 
@@ -18,6 +19,7 @@ export class MessageLogsService {
     messageLength: number,
     cost: number,
     attachments?: { filename: string; contentType: string }[],
+    campaignId?: string,  // ← Optional campaignId
   ): Promise<MessageLog> {
     const log = new this.messageLogModel({
       channel,
@@ -29,6 +31,7 @@ export class MessageLogsService {
       messageLength,
       cost,
       attachments,
+      campaignId: campaignId ? new Types.ObjectId(campaignId) : null,
     });
     return log.save();
   }
@@ -43,5 +46,13 @@ export class MessageLogsService {
     if (filters.dateFrom) query.createdAt = { $gte: filters.dateFrom };
     if (filters.dateTo) query.createdAt = { ...query.createdAt || {}, $lte: filters.dateTo };
     return this.messageLogModel.find(query).sort({ createdAt: -1 }).exec();
+  }
+
+  // ← New method for analytics
+  async getLogsForCampaign(campaignId: string, orgId: string): Promise<MessageLog[]> {
+    return this.messageLogModel.find({
+      campaignId: new Types.ObjectId(campaignId),
+      senderOrgId: orgId,
+    } as any).exec();
   }
 }

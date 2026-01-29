@@ -1,3 +1,4 @@
+// src/modules/contacts/services/contacts/contacts.service.ts (add missing methods)
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -24,13 +25,28 @@ export class ContactsService {
       .exec();
   }
 
+  // ← New: Get by IDs
+  async getContactsByIds(ids: string[], orgId: string): Promise<Contact[]> {
+    return this.contactModel.find({
+      _id: { $in: ids.map(id => new Types.ObjectId(id)) },
+      notifyHubOrganization: new Types.ObjectId(orgId),
+    } as any).exec();
+  }
+
+  // ← New: Get by group ID
+  async getContactsByGroup(groupId: string, orgId: string): Promise<Contact[]> {
+    return this.contactModel.find({
+      groups: new Types.ObjectId(groupId),
+      notifyHubOrganization: new Types.ObjectId(orgId),
+    } as any).exec();
+  }
+
   async updateContact(id: string, payload: any, orgId: string): Promise<Contact> {
     const contact = await this.contactModel.findOne({
       _id: new Types.ObjectId(id),
       notifyHubOrganization: new Types.ObjectId(orgId),
     } as any);
     if (!contact) throw new BadRequestException('Contact not found');
-
     Object.assign(contact, payload);
     return contact.save();
   }
