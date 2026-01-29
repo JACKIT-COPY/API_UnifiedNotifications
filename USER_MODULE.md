@@ -2,7 +2,7 @@
 
 **Date**: January 15, 2026  
 **Version**: 1.0.0  
-**Base URL**: `http://localhost:3000` (development)  
+**Base URL**: `http://localhost:3040` (development)  
 
 This document covers the **Users** module in NotifyHub – a multi-tenant unified notifications platform.  
 Users represent people who can log in to the dashboard (admins, team members, etc.).  

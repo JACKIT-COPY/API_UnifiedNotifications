@@ -21,6 +21,6 @@ import { MessageLogsModule } from '../messages-logs/message-logs.module';
   ],
   controllers: [NotificationsController],
   providers: [NotificationsService],
-  exports: [],
+  exports: [NotificationsService],
 })
 export class NotificationsModule {}
