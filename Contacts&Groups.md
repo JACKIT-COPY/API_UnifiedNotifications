@@ -3,7 +3,7 @@
 
 **Date**: January 08, 2026  
 **Version**: 1.0.0  
-**Base URL**: `http://localhost:3000` (development)  
+**Base URL**: `http://localhost:3040` (development)  
 
 This document covers the **Contacts** and **Groups** features for NotifyHub, a multi-tenant unified notifications platform. All endpoints are **protected** by JWT authentication and scoped to the authenticated organization.
 
