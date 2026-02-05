@@ -1,13 +1,29 @@
-// src/modules/organizations/controllers/organizations/organizations.controller.ts
-import { Controller, Get, Put, Body, UseGuards, Request, Param, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Put, Patch, Body, UseGuards, Request, Param, ForbiddenException } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { AdminGuard } from 'src/modules/auth/guards/admin.guard';
+import { SuperAdminGuard } from 'src/modules/auth/guards/super-admin.guard';
 import { OrganizationsService } from '../../services/organizations/organizations.service';
 
 @Controller('organizations')
 @UseGuards(JwtAuthGuard)
 export class OrganizationsController {
-  constructor(private organizationsService: OrganizationsService) {}
+  constructor(private organizationsService: OrganizationsService) { }
+
+  // Super Admin: Get all organizations
+  @Get()
+  @UseGuards(SuperAdminGuard)
+  async getAllOrganizations() {
+    return this.organizationsService.findAll();
+  }
+
+  // Diagnostic endpoint
+  @Get('ping')
+  ping() {
+    return { message: 'pong', timestamp: new Date().toISOString() };
+  }
+
+
+
 
   // Get the current user's organization
   @Get('current')
@@ -22,14 +38,55 @@ export class OrganizationsController {
     return this.organizationsService.updateCredentials(req.user.orgId, credentials);
   }
 
-  // Optional: Admin can view any org (for super-admin features later)
+  // Get organization by ID (Admin can view their own, Super-admin can view any)
   @Get(':orgId')
-  @UseGuards(AdminGuard)  // Only admins can access other orgs
   async getOrganization(@Param('orgId') orgId: string, @Request() req) {
-    // Extra safety: even admins can only access orgs they belong to (unless super-admin)
-    if (req.user.orgId !== orgId) {
-      throw new ForbiddenException('You do not have access to this organization');
+    const user = req.user;
+
+    // Super-admin can access any organization
+    if (user.role === 'superadmin') {
+      return this.organizationsService.getById(orgId);
     }
-    return this.organizationsService.getById(orgId);
+
+    // Admins can only access their own organization
+    if (user.role === 'admin' && user.orgId === orgId) {
+      return this.organizationsService.getById(orgId);
+    }
+
+    throw new ForbiddenException('You do not have access to this organization');
+  }
+
+  // Update organization details
+  @Patch(':orgId')
+  async updateOrganization(
+    @Param('orgId') orgId: string,
+    @Body() updateData: any,
+    @Request() req
+  ) {
+    const user = req.user;
+
+    // Super-admin can update any
+    // Or Admin can update their own
+    if (user.role === 'superadmin' || (user.role === 'admin' && user.orgId === orgId)) {
+      return this.organizationsService.update(orgId, updateData);
+    }
+
+    throw new ForbiddenException('You do not have access to update this organization');
+  }
+
+  // Update organization credentials
+  @Patch(':orgId/credentials')
+  async updateCredentialsById(
+    @Param('orgId') orgId: string,
+    @Body('credentials') credentials: Record<string, string>,
+    @Request() req
+  ) {
+    const user = req.user;
+
+    if (user.role === 'superadmin' || (user.role === 'admin' && user.orgId === orgId)) {
+      return this.organizationsService.updateCredentials(orgId, credentials);
+    }
+
+    throw new ForbiddenException('You do not have access to update credentials for this organization');
   }
 }
