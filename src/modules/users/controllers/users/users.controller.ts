@@ -96,6 +96,12 @@ export class UsersController {
     return this.usersService.getUsersStatsAcrossOrgs();
   }
 
+  @Post('admin')
+  @UseGuards(SuperAdminGuard)
+  async adminCreateUser(@Body() userData: any) {
+    return this.usersService.createUser(userData);
+  }
+
   @Put('admin/:id')
   @UseGuards(SuperAdminGuard)
   async adminUpdateUser(@Param('id') id: string, @Body() updateData: any) {

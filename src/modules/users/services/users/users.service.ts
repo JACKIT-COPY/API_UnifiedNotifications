@@ -92,9 +92,12 @@ export class UsersService {
     return user;
   }
 
-  async createUser(userData: Partial<User>, orgId: string): Promise<User> {
+  async createUser(userData: Partial<User>, orgId?: string): Promise<User> {
     const existing = await this.userModel.findOne({ email: userData.email });
     if (existing) throw new BadRequestException('Email already exists');
+
+    const finalOrgId = userData.organization || orgId;
+    if (!finalOrgId) throw new BadRequestException('Organization is required');
 
     const hashedPassword = await bcrypt.hash(
       userData.password || 'default123',
@@ -103,7 +106,7 @@ export class UsersService {
     const user = new this.userModel({
       ...userData,
       password: hashedPassword,
-      organization: new Types.ObjectId(orgId),
+      organization: new Types.ObjectId(finalOrgId as any),
       role: userData.role || 'user', // Default to 'user' unless admin specifies
       isActive: true,
     });
