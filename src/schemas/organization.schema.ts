@@ -22,6 +22,24 @@ export class Organization extends Document {
   // ── NEW: Per-org credentials (optional, falls back to .env) ──
   @Prop({ type: Object, default: {} })
   credentials: Record<string, string>;
+
+  @Prop({
+    type: {
+      sms: { type: Number, default: 1 },
+      whatsapp: { type: Number, default: 1 },
+      email: { type: Number, default: 0.5 },
+    },
+    default: {
+      sms: 1,
+      whatsapp: 1,
+      email: 0.5,
+    }
+  })
+  rates: {
+    sms: number;
+    whatsapp: number;
+    email: number;
+  };
 }
 
 export const OrganizationSchema = SchemaFactory.createForClass(Organization);
