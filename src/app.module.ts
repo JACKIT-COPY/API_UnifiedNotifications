@@ -13,6 +13,7 @@ import { MessageLogsModule } from './modules/messages-logs/message-logs.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { SystemLogsModule } from './modules/system-logs/system-logs.module';
+import { TemplatesModule } from './modules/templates/templates.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { LoggingInterceptor } from './modules/system-logs/interceptors/logging.interceptor';
 
@@ -36,6 +37,7 @@ import { LoggingInterceptor } from './modules/system-logs/interceptors/logging.i
     MessageLogsModule,
     CampaignsModule,
     SystemLogsModule,
+    TemplatesModule,
   ],
   controllers: [AppController],
   providers: [
