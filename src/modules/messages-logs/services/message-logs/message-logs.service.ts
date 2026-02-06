@@ -4,10 +4,14 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { MessageLog } from 'src/schemas/message-log.schema';
 import { NotificationType } from 'src/integrations/interfaces/notification.interface';
+import { LogsGateway } from '../../gateways/logs.gateway';
 
 @Injectable()
 export class MessageLogsService {
-  constructor(@InjectModel('MessageLog') private messageLogModel: Model<MessageLog>) {}
+  constructor(
+    @InjectModel('MessageLog') private messageLogModel: Model<MessageLog>,
+    private logsGateway: LogsGateway,
+  ) { }
 
   async logMessage(
     channel: NotificationType,
@@ -33,7 +37,12 @@ export class MessageLogsService {
       attachments,
       campaignId: campaignId ? new Types.ObjectId(campaignId) : null,
     });
-    return log.save();
+    const savedLog = await log.save();
+
+    // Emit real-time log
+    this.logsGateway.sendNewLog(savedLog);
+
+    return savedLog;
   }
 
   async getLogs(
@@ -46,6 +55,19 @@ export class MessageLogsService {
     if (filters.dateFrom) query.createdAt = { $gte: filters.dateFrom };
     if (filters.dateTo) query.createdAt = { ...query.createdAt || {}, $lte: filters.dateTo };
     return this.messageLogModel.find(query).sort({ createdAt: -1 }).exec();
+  }
+
+  async getAllLogs(filters: { channel?: NotificationType; status?: string; dateFrom?: Date; dateTo?: Date }): Promise<MessageLog[]> {
+    const query: any = {};
+    if (filters.channel) query.channel = filters.channel;
+    if (filters.status) query['recipients.status'] = filters.status;
+    if (filters.dateFrom) query.createdAt = { $gte: new Date(filters.dateFrom) };
+    if (filters.dateTo) query.createdAt = { ...query.createdAt || {}, $lte: new Date(filters.dateTo) };
+    return this.messageLogModel.find(query)
+      .populate('senderUserId', 'name email')
+      .populate('senderOrgId', 'name')
+      .sort({ createdAt: -1 })
+      .exec();
   }
 
   // ← New method for analytics
