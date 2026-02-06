@@ -27,8 +27,13 @@ export class LogsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         console.log(`Client disconnected: ${client.id}`);
     }
 
-    // We can add roles check here if needed
+    // Messages logs
     sendNewLog(log: any) {
         this.server.emit('new_log', log);
+    }
+
+    // Backend system logs
+    sendNewSystemLog(log: any) {
+        this.server.emit('new_system_log', log);
     }
 }
