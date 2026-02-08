@@ -17,9 +17,12 @@ import { TemplatesModule } from './modules/templates/templates.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { LoggingInterceptor } from './modules/system-logs/interceptors/logging.interceptor';
 
+import { ScheduleModule } from '@nestjs/schedule';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
+    ScheduleModule.forRoot(),
     UsersModule,
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
