@@ -15,7 +15,7 @@ import * as bcrypt from 'bcrypt';
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
 
-  constructor(@InjectModel('User') private userModel: Model<User>) {}
+  constructor(@InjectModel('User') private userModel: Model<User>) { }
 
   async getUsers(orgId: string): Promise<User[]> {
     this.logger.log(`Fetching users for organization: ${orgId}`);
@@ -29,22 +29,75 @@ export class UsersService {
     return users;
   }
 
-  async getUserById(id: string, orgId: string): Promise<User> {
+  async getAllUsersAcrossOrgs(): Promise<User[]> {
+    this.logger.log('Fetching all users across all organizations');
+    return this.userModel
+      .find()
+      .populate('organization')
+      .select('-password')
+      .exec();
+  }
+
+  async getUsersStatsAcrossOrgs() {
+    const totalUsers = await this.userModel.countDocuments();
+    const activeUsers = await this.userModel.countDocuments({ isActive: true });
+    const inactiveUsers = await this.userModel.countDocuments({ isActive: false });
+
+    // Users per organization
+    const usersByOrg = await this.userModel.aggregate([
+      {
+        $group: {
+          _id: '$organization',
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $lookup: {
+          from: 'organizations',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'orgInfo',
+        },
+      },
+      {
+        $unwind: '$orgInfo',
+      },
+      {
+        $project: {
+          _id: 1,
+          name: '$orgInfo.name',
+          count: 1,
+        },
+      },
+    ]);
+
+    return {
+      totalUsers,
+      activeUsers,
+      inactiveUsers,
+      usersByOrg,
+    };
+  }
+
+  async getUserById(id: string, orgId?: string): Promise<User> {
+    const query: any = { _id: new Types.ObjectId(id) };
+    if (orgId) query.organization = new Types.ObjectId(orgId);
+
     const user = await this.userModel
-      .findOne({
-        _id: new Types.ObjectId(id),
-        organization: new Types.ObjectId(orgId),
-      })
-      .populate('organization') // ← Add this line!
+      .findOne(query)
+      .populate('organization')
       .select('-password')
       .exec();
     if (!user) throw new NotFoundException('User not found');
     return user;
   }
 
-  async createUser(userData: Partial<User>, orgId: string): Promise<User> {
+  async createUser(userData: Partial<User>, orgId?: string): Promise<User> {
     const existing = await this.userModel.findOne({ email: userData.email });
     if (existing) throw new BadRequestException('Email already exists');
+
+    const finalOrgId = userData.organization || orgId;
+    if (!finalOrgId) throw new BadRequestException('Organization is required');
 
     const hashedPassword = await bcrypt.hash(
       userData.password || 'default123',
@@ -53,7 +106,7 @@ export class UsersService {
     const user = new this.userModel({
       ...userData,
       password: hashedPassword,
-      organization: new Types.ObjectId(orgId),
+      organization: new Types.ObjectId(finalOrgId as any),
       role: userData.role || 'user', // Default to 'user' unless admin specifies
       isActive: true,
     });
@@ -64,12 +117,12 @@ export class UsersService {
   async updateUser(
     id: string,
     updateData: Partial<User>,
-    orgId: string,
+    orgId?: string,
   ): Promise<User> {
-    const user = await this.userModel.findOne({
-      _id: new Types.ObjectId(id),
-      organization: new Types.ObjectId(orgId),
-    });
+    const query: any = { _id: new Types.ObjectId(id) };
+    if (orgId) query.organization = new Types.ObjectId(orgId);
+
+    const user = await this.userModel.findOne(query);
 
     if (!user) throw new NotFoundException('User not found');
 
@@ -85,11 +138,11 @@ export class UsersService {
     return user.save();
   }
 
-  async deactivateUser(id: string, orgId: string): Promise<User> {
-    const user = await this.userModel.findOne({
-      _id: new Types.ObjectId(id),
-      organization: new Types.ObjectId(orgId),
-    });
+  async deactivateUser(id: string, orgId?: string): Promise<User> {
+    const query: any = { _id: new Types.ObjectId(id) };
+    if (orgId) query.organization = new Types.ObjectId(orgId);
+
+    const user = await this.userModel.findOne(query);
 
     if (!user) throw new NotFoundException('User not found');
     if (!user.isActive)
@@ -99,11 +152,11 @@ export class UsersService {
     return user.save();
   }
 
-  async reactivateUser(id: string, orgId: string): Promise<User> {
-    const user = await this.userModel.findOne({
-      _id: new Types.ObjectId(id),
-      organization: new Types.ObjectId(orgId),
-    });
+  async reactivateUser(id: string, orgId?: string): Promise<User> {
+    const query: any = { _id: new Types.ObjectId(id) };
+    if (orgId) query.organization = new Types.ObjectId(orgId);
+
+    const user = await this.userModel.findOne(query);
 
     if (!user) throw new NotFoundException('User not found');
     if (user.isActive) throw new BadRequestException('User already active');
@@ -112,11 +165,11 @@ export class UsersService {
     return user.save();
   }
 
-  async deleteUser(id: string, orgId: string): Promise<void> {
-    const user = await this.userModel.findOne({
-      _id: new Types.ObjectId(id),
-      organization: new Types.ObjectId(orgId),
-    });
+  async deleteUser(id: string, orgId?: string): Promise<void> {
+    const query: any = { _id: new Types.ObjectId(id) };
+    if (orgId) query.organization = new Types.ObjectId(orgId);
+
+    const user = await this.userModel.findOne(query);
 
     if (!user) throw new NotFoundException('User not found');
 
@@ -124,40 +177,40 @@ export class UsersService {
   }
 
   // src/modules/users/services/users/users.service.ts
-async changePassword(
-  targetUserId: string,
-  oldPassword: string,
-  newPassword: string,
-  requesterUserId: string,
-  requesterOrgId: string,
-  isAdminReset: boolean = false, // Optional: if admin can reset without old password
-): Promise<User> {
-  const targetUser = await this.userModel.findOne({
-    _id: new Types.ObjectId(targetUserId),
-    organization: new Types.ObjectId(requesterOrgId),
-  });
+  async changePassword(
+    targetUserId: string,
+    oldPassword: string,
+    newPassword: string,
+    requesterUserId: string,
+    requesterOrgId?: string,
+    isAdminReset: boolean = false, // Optional: if admin can reset without old password
+  ): Promise<User> {
+    const query: any = { _id: new Types.ObjectId(targetUserId) };
+    if (requesterOrgId) query.organization = new Types.ObjectId(requesterOrgId);
 
-  if (!targetUser) throw new NotFoundException('User not found');
+    const targetUser = await this.userModel.findOne(query);
 
-  // Security: Regular user can only change their own password
-  if (requesterUserId !== targetUserId && !isAdminReset) {
-    throw new ForbiddenException('You can only change your own password');
+    if (!targetUser) throw new NotFoundException('User not found');
+
+    // Security: Regular user can only change their own password
+    if (requesterUserId !== targetUserId && !isAdminReset) {
+      throw new ForbiddenException('You can only change your own password');
+    }
+
+    // Require old password unless admin reset
+    if (!isAdminReset) {
+      const isMatch = await bcrypt.compare(oldPassword, targetUser.password);
+      if (!isMatch) throw new BadRequestException('Current password is incorrect');
+    }
+
+    // Validate new password (optional: add length/strength check)
+    if (!newPassword || newPassword.length < 8) {
+      throw new BadRequestException('New password must be at least 8 characters');
+    }
+
+    targetUser.password = await bcrypt.hash(newPassword, 10);
+    return targetUser.save();
   }
-
-  // Require old password unless admin reset
-  if (!isAdminReset) {
-    const isMatch = await bcrypt.compare(oldPassword, targetUser.password);
-    if (!isMatch) throw new BadRequestException('Current password is incorrect');
-  }
-
-  // Validate new password (optional: add length/strength check)
-  if (!newPassword || newPassword.length < 8) {
-    throw new BadRequestException('New password must be at least 8 characters');
-  }
-
-  targetUser.password = await bcrypt.hash(newPassword, 10);
-  return targetUser.save();
-}
 
   async findByEmail(email: string): Promise<User | null> {
     return this.userModel.findOne({ email }).exec();
