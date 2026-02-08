@@ -3,13 +3,18 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import * as bodyParser from 'body-parser';
+import { Logger } from '@nestjs/common';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+  });
 
   // === BODY SIZE LIMIT (IMPORTANT FOR ATTACHMENTS) ===
   app.use(bodyParser.json({ limit: '25mb' }));
   app.use(bodyParser.urlencoded({ limit: '25mb', extended: true }));
+
+  app.useLogger(new Logger());
 
   // === ENABLE CORS ===
   app.enableCors({
@@ -17,7 +22,7 @@ async function bootstrap() {
       'http://localhost:3000', // For when frontend and backend on same port (rare)
       'http://localhost:3001', // Common Next.js dev port
       'http://localhost:3002',
-      'https://api-unifiednotifications.onrender.com', // Replace with your actual Vercel URL later
+      'https://unified-notifications-admin.vercel.app', // Replace with your actual Vercel URL later
       'https://notifyhub.vercel.app', // Example production domain
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],

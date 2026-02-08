@@ -12,6 +12,10 @@ import { LancolaSmsModule } from './integrations/lancola-sms/lancola-sms.module'
 import { MessageLogsModule } from './modules/messages-logs/message-logs.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
+import { SystemLogsModule } from './modules/system-logs/system-logs.module';
+import { TemplatesModule } from './modules/templates/templates.module';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { LoggingInterceptor } from './modules/system-logs/interceptors/logging.interceptor';
 
 @Module({
   imports: [
@@ -19,7 +23,7 @@ import { CampaignsModule } from './modules/campaigns/campaigns.module';
     UsersModule,
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (configService) => ({
+      useFactory: async (configService: ConfigService) => ({
         uri: configService.get('MONGODB_URI'),
       }),
       inject: [ConfigService],
@@ -32,8 +36,16 @@ import { CampaignsModule } from './modules/campaigns/campaigns.module';
     OrganizationsModule,
     MessageLogsModule,
     CampaignsModule,
+    SystemLogsModule,
+    TemplatesModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
+    },
+  ],
 })
-export class AppModule {}
+export class AppModule { }
