@@ -22,8 +22,8 @@ async function bootstrap() {
       'http://localhost:3000', // For when frontend and backend on same port (rare)
       'http://localhost:3001', // Common Next.js dev port
       'http://localhost:3002',
-      'https://unified-notifications-admin.vercel.app', // Replace with your actual Vercel URL later
-      'https://notifyhub.vercel.app', // Example production domain
+      'https://unified-notifications-admin.vercel.app', // Admin actual Vercel URL
+      'https://v0-imflow-website-design.vercel.app/', // Client actual Vercel URL
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
