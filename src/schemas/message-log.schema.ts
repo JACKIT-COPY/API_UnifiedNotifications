@@ -30,6 +30,9 @@ export class MessageLog extends Document {
   messagePreview: string;
 
   @Prop()
+  subject?: string;
+
+  @Prop()
   fullMessage?: string;
 
   @Prop({ required: true })

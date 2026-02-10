@@ -27,6 +27,7 @@ export class MessageLogsService {
     scheduledAt?: Date,
     status: string = 'sent',
     fullMessage?: string,
+    subject?: string,
   ): Promise<MessageLog> {
     const log = new this.messageLogModel({
       channel,
@@ -36,6 +37,7 @@ export class MessageLogsService {
       recipients,
       messagePreview,
       fullMessage,
+      subject,
       messageLength,
       cost,
       attachments,
@@ -116,10 +118,33 @@ export class MessageLogsService {
   }
 
   async findScheduledLogs(): Promise<MessageLog[]> {
-    return this.messageLogModel.find({
-      status: 'scheduled',
-      scheduledAt: { $lte: new Date() }
-    }).exec();
+    const now = new Date();
+    const claimedLogs: MessageLog[] = [];
+    let hasMore = true;
+
+    // Use a loop to atomically claim logs one by one
+    // This is safer for high concurrency than updateMany + find
+    while (hasMore) {
+      const log = await this.messageLogModel.findOneAndUpdate(
+        {
+          status: 'scheduled',
+          scheduledAt: { $lte: now }
+        },
+        { $set: { status: 'processing' } },
+        { new: true }
+      ).exec();
+
+      if (log) {
+        claimedLogs.push(log);
+      } else {
+        hasMore = false;
+      }
+
+      // Safety limit to prevent infinite loops if something goes wrong
+      if (claimedLogs.length >= 100) hasMore = false;
+    }
+
+    return claimedLogs;
   }
 
   async findLogById(id: string): Promise<MessageLog | null> {
