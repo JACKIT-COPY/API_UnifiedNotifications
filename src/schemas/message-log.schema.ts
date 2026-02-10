@@ -29,6 +29,9 @@ export class MessageLog extends Document {
   @Prop({ required: true })
   messagePreview: string;
 
+  @Prop()
+  fullMessage?: string;
+
   @Prop({ required: true })
   messageLength: number;
 
@@ -40,6 +43,12 @@ export class MessageLog extends Document {
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Campaign', default: null })  // ← New field for linking to campaign
   campaignId?: MongooseSchema.Types.ObjectId;
+
+  @Prop({ type: Date, default: null })
+  scheduledAt?: Date;
+
+  @Prop({ type: String, enum: ['scheduled', 'sent', 'failed', 'pending', 'processing'], default: 'pending' })
+  status: string;
 }
 
 export const MessageLogSchema = SchemaFactory.createForClass(MessageLog);

@@ -9,6 +9,8 @@ import { LancolaEmailModule } from 'src/integrations/lancola-email/lancola-email
 import { LancolaWhatsAppModule } from 'src/integrations/lancola-whatsapp/lancola-whatsapp.module';
 import { MessageLogsModule } from '../messages-logs/message-logs.module';
 
+import { SchedulingService } from './services/notifications/scheduling.service';
+
 @Module({
   imports: [
     ConfigModule.forRoot(),
@@ -20,7 +22,7 @@ import { MessageLogsModule } from '../messages-logs/message-logs.module';
     MessageLogsModule,
   ],
   controllers: [NotificationsController],
-  providers: [NotificationsService],
+  providers: [NotificationsService, SchedulingService],
   exports: [NotificationsService],
 })
-export class NotificationsModule {}
+export class NotificationsModule { }
