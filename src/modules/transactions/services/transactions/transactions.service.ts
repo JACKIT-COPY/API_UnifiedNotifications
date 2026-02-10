@@ -1,12 +1,14 @@
 // src/modules/transactions/services/transactions/transactions.service.ts
-import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Transaction, TransactionDocument } from 'src/schemas/transaction.schema';
 import { PaymentMethodsService } from 'src/modules/payment-methods/services/payment-methods/payment-methods.service';
 import { InitiatePaymentDto } from '../../dto/initiate-payment.dto';
-import { UserDocument } from 'src/schemas/user.schema';
 import { OrganizationsService } from 'src/modules/organizations/services/organizations/organizations.service';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class TransactionsService {
@@ -15,6 +17,7 @@ export class TransactionsService {
         private transactionModel: Model<TransactionDocument>,
         private organizationsService: OrganizationsService,
         private paymentMethodsService: PaymentMethodsService,
+        private readonly httpService: HttpService,
     ) { }
 
     /**
@@ -74,17 +77,16 @@ export class TransactionsService {
 
         // 2. Validate organization
         const orgId = dto.organizationId || user.organization;
-        await this.organizationsService.getById(orgId); // Throws if not found
+        const org = await this.organizationsService.getById(orgId); // Throws if not found
 
-        // 3. Calculate tokens (assuming 1 KES = 1 Token for now, or use complex rate logic)
-        // Rate logic could be fetched from organization settings or global settings
-        const rate = 1; // 1 KES = 1 Token
+        // 3. Calculate tokens (assuming 1 KES = 1 Token)
+        const rate = 1;
         const tokens = Math.floor(dto.amount * rate);
 
         // 4. Create Pending Transaction Record
         const transaction = new this.transactionModel({
             organizationId: orgId,
-            userId: user._id || user.userId, // Depending on user object structure
+            userId: user._id || user.userId,
             amount: dto.amount,
             tokens: tokens,
             paymentMethod: 'mpesa',
@@ -103,16 +105,120 @@ export class TransactionsService {
         // 5. Update Payment Method Usage
         await this.paymentMethodsService.incrementUsage(paymentMethod._id.toString());
 
-        // 6. TODO: Call M-Pesa API here using credentials from paymentMethod
-        // This would involve:
-        // - Generating access token using consumerKey:consumerSecret
-        // - Making STK Push request to Safaricom
-        // - Updating transaction with CheckoutRequestID
+        // 6. Handle M-Pesa STK Push
+        try {
+            const phoneNumber = dto.phoneNumber.startsWith('+') ? dto.phoneNumber.substring(1) : dto.phoneNumber;
 
-        // For now, we simulate success or return the pending transaction
-        return transaction;
+            // Generate Access Token
+            const auth = Buffer.from(`${paymentMethod.consumerKey}:${paymentMethod.consumerSecret}`).toString('base64');
+            const tokenUrl = paymentMethod.environment === 'sandbox'
+                ? 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials'
+                : 'https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials';
+
+            const tokenResponse = await firstValueFrom(
+                this.httpService.get(tokenUrl, {
+                    headers: { Authorization: `Basic ${auth}` }
+                })
+            );
+
+            const accessToken = tokenResponse.data.access_token;
+
+            // Generate Password
+            const timestamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
+            const password = Buffer.from(
+                `${paymentMethod.shortcode}${paymentMethod.passkey}${timestamp}`
+            ).toString('base64');
+
+            // STK Push Request
+            const stkPushUrl = paymentMethod.environment === 'sandbox'
+                ? 'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/query' // Wait, this is query. Correct is /v1/processrequest
+                : 'https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest';
+
+            // Correction: both use processrequest
+            const processRequestUrl = paymentMethod.environment === 'sandbox'
+                ? 'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest'
+                : 'https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest';
+
+            const callbackUrl = process.env.MPESA_CALLBACK_URL || 'https://your-domain.com/transactions/callback';
+
+            const stkData = {
+                BusinessShortCode: paymentMethod.shortcode,
+                Password: password,
+                Timestamp: timestamp,
+                TransactionType: paymentMethod.shortcode.length > 5 ? 'CustomerBuyGoodsOnline' : 'CustomerPayBillOnline',
+                Amount: Math.round(dto.amount),
+                PartyA: phoneNumber,
+                PartyB: paymentMethod.shortcode,
+                PhoneNumber: phoneNumber,
+                CallBackURL: callbackUrl,
+                AccountReference: `Topup-${org.name.replace(/\s+/g, '')}`.slice(0, 12),
+                TransactionDesc: `Token Purchase for ${org.name}`.slice(0, 20)
+            };
+
+            const stkResponse = await firstValueFrom(
+                this.httpService.post(processRequestUrl, stkData, {
+                    headers: { Authorization: `Bearer ${accessToken}` }
+                })
+            );
+
+            // Update transaction with M-Pesa details
+            transaction.checkoutRequestId = stkResponse.data.CheckoutRequestID;
+            transaction.merchantRequestId = stkResponse.data.MerchantRequestID;
+            await transaction.save();
+
+            return transaction;
+        } catch (error) {
+            console.error('M-Pesa STK Push Error:', error.response?.data || error.message);
+            // Don't fail the whole request, but return the transaction as pending/failed
+            // In a real scenario, you might want to throw if STK push fails to initiate
+            transaction.status = 'failed';
+            transaction.metadata = { ...transaction.metadata, error: error.response?.data || error.message };
+            await transaction.save();
+            throw new BadRequestException(error.response?.data?.CustomerMessage || 'Failed to initiate M-Pesa payment');
+        }
     }
 
-    // TODO: Add callback handler for M-Pesa to update transaction status
-    // async handleCallback(payload: any) { ... }
+    /**
+     * Handle M-Pesa Callback
+     */
+    async handleCallback(payload: any) {
+        const stkCallback = payload.Body.stkCallback;
+        const checkoutRequestId = stkCallback.CheckoutRequestID;
+        const resultCode = stkCallback.ResultCode;
+
+        const transaction = await this.transactionModel.findOne({ checkoutRequestId });
+        if (!transaction) {
+            console.error(`Transaction not found for CheckoutRequestID: ${checkoutRequestId}`);
+            return { ResultCode: 1, ResultDesc: 'Transaction not found' };
+        }
+
+        if (resultCode === 0) {
+            // Success
+            transaction.status = 'completed';
+
+            // Extract MpesaReceiptNumber
+            const callbackMetadata = stkCallback.CallbackMetadata.Item;
+            const mpesaReference = callbackMetadata.find(item => item.Name === 'MpesaReceiptNumber')?.Value;
+            transaction.mpesaReference = mpesaReference;
+
+            await transaction.save();
+
+            // UPDATE ORGANIZATION CREDITS
+            await this.organizationsService.updateCredits(
+                transaction.organizationId,
+                transaction.tokens
+            );
+        } else {
+            // Failed
+            transaction.status = 'failed';
+            transaction.metadata = {
+                ...transaction.metadata,
+                resultDesc: stkCallback.ResultDesc,
+                resultCode: resultCode
+            };
+            await transaction.save();
+        }
+
+        return { ResultCode: 0, ResultDesc: 'Success' };
+    }
 }

@@ -18,7 +18,6 @@ import { AdminGuard } from 'src/modules/auth/guards/admin.guard'; // Use AdminGu
 import { SuperAdminGuard } from 'src/modules/auth/guards/super-admin.guard'; // Use SuperAdminGuard for all transactions
 
 @Controller('transactions')
-@UseGuards(JwtAuthGuard)
 export class TransactionsController {
     constructor(private readonly transactionsService: TransactionsService) { }
 
@@ -27,7 +26,7 @@ export class TransactionsController {
      * GET /transactions
      */
     @Get()
-    @UseGuards(SuperAdminGuard)
+    @UseGuards(JwtAuthGuard, SuperAdminGuard)
     async findAll() {
         return this.transactionsService.findAll();
     }
@@ -37,7 +36,7 @@ export class TransactionsController {
      * GET /transactions/organization/:orgId
      */
     @Get('organization/:orgId')
-    @UseGuards(AdminGuard)
+    @UseGuards(JwtAuthGuard, AdminGuard)
     async findByOrganization(@Param('orgId') orgId: string) {
         return this.transactionsService.findByOrganization(orgId);
     }
@@ -47,6 +46,7 @@ export class TransactionsController {
      * GET /transactions/:id
      */
     @Get(':id')
+    @UseGuards(JwtAuthGuard)
     async findOne(@Param('id') id: string) {
         // Ideally check if user belongs to org of transaction, or is super admin
         return this.transactionsService.findOne(id);
@@ -57,8 +57,20 @@ export class TransactionsController {
      * POST /transactions/purchase
      */
     @Post('purchase')
+    @UseGuards(JwtAuthGuard)
     @HttpCode(HttpStatus.CREATED)
     async initiatePayment(@Req() req: any, @Body() initiateDto: InitiatePaymentDto) {
         return this.transactionsService.initiatePayment(req.user, initiateDto);
+    }
+
+    /**
+     * M-Pesa Callback (Public)
+     * POST /transactions/callback
+     */
+    @Post('callback')
+    @HttpCode(HttpStatus.OK)
+    async callback(@Body() payload: any) {
+        console.log('M-Pesa Callback Received:', JSON.stringify(payload));
+        return this.transactionsService.handleCallback(payload);
     }
 }
