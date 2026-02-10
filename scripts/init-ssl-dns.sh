@@ -5,7 +5,7 @@
 
 set -e
 
-DOMAIN="sms.lancolatech.co.ke"
+DOMAIN="smsapi.solby.io"
 EMAIL="admin@lancolatech.co.ke"
 
 echo "=========================================="
@@ -41,10 +41,10 @@ echo "=========================================="
 echo ""
 echo "Certbot will show you a TXT record to add."
 echo ""
-echo "1. Go to DigitalOcean → Networking → Domains"
-echo "2. Find: lancolatech.co.ke"
+echo "1. Go to your cPanel DNS Zone Editor"
+echo "2. Find domain: solby.io"
 echo "3. Add TXT record:"
-echo "   - Hostname: _acme-challenge.sms"
+echo "   - Name: _acme-challenge.smsapi"
 echo "   - Value: (the value certbot shows)"
 echo "   - TTL: 300"
 echo "4. Wait 2-3 minutes for DNS propagation"
