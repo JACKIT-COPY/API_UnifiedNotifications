@@ -45,11 +45,14 @@ class NotificationDto implements NotificationPayload {
   @IsOptional()
   data?: Record<string, any>;
 
-  @ValidateIf(o => o.type === NotificationType.EMAIL)
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => AttachmentDto)
   attachments?: AttachmentDto[];
+
+  @IsOptional()
+  @Type(() => Date)
+  scheduledAt?: Date;
 }
 
 interface NotificationResult {
@@ -61,7 +64,7 @@ interface NotificationResult {
 @Controller('notifications')
 @UseGuards(JwtAuthGuard)  // All notification endpoints now require auth
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(private readonly notificationsService: NotificationsService) { }
 
   @Post('send')
   @UsePipes(new ValidationPipe({ transform: true }))
@@ -83,5 +86,12 @@ export class NotificationsController {
     const orgId = req.user.orgId;
     const userId = req.user.userId;
     return this.notificationsService.sendNotificationToAllUsers(payload, orgId, userId);
+  }
+
+  @Post('send-now')
+  async sendNow(@Body('logId') logId: string, @Request() req) {
+    const orgId = req.user.orgId;
+    const userId = req.user.userId;
+    return this.notificationsService.sendNow(logId, orgId, userId);
   }
 }

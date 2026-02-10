@@ -13,9 +13,10 @@ export interface NotificationPayload {
   subject?: string; // Optional, mainly for email
   templateId?: string; // Optional, for templated notifications
   data?: Record<string, any>; // Optional, for extra metadata (e.g., push notification data)
-    attachments?: Array<{
+  attachments?: Array<{
     filename: string;
     content: string; // Base64-encoded content
     contentType?: string;
   }>;
+  scheduledAt?: Date;
 }

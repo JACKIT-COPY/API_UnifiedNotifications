@@ -29,18 +29,13 @@ export class NotificationsService {
     private readonly usersService: UsersService,
     private readonly contactsService: ContactsService,
     private readonly messageLogsService: MessageLogsService,
-  ) {}
+  ) { }
 
   async sendNotification(
     payload: NotificationPayload,
     orgId: string,
     userId: string,
   ): Promise<void> {
-    this.logger.log(
-      `Sending ${payload.type} notification to ${payload.to} (org: ${orgId}, user: ${userId})`,
-    );
-
-    // Normalize recipient for logging (first one if array)
     const recipient = Array.isArray(payload.to) ? payload.to[0] : payload.to;
 
     // Map channel to provider name for logging
@@ -57,6 +52,33 @@ export class NotificationsService {
       }
     };
 
+    // If scheduled for later, just log it as scheduled
+    if (payload.scheduledAt && new Date(payload.scheduledAt) > new Date()) {
+      this.logger.log(
+        `Scheduling ${payload.type} notification to ${payload.to} at ${payload.scheduledAt} (org: ${orgId}, user: ${userId})`,
+      );
+      await this.messageLogsService.logMessage(
+        payload.type,
+        userId,
+        orgId,
+        networkForChannel(payload.type),
+        [{ recipient, status: 'pending' }],
+        payload.message?.substring(0, 100) || '',
+        payload.message?.length || 0,
+        0, // No cost yet
+        payload.attachments?.map((a) => ({ filename: a.filename, contentType: a.contentType || 'application/octet-stream' })),
+        undefined, // campaignId
+        payload.scheduledAt,
+        'scheduled',
+        payload.message,
+      );
+      return;
+    }
+
+    this.logger.log(
+      `Sending ${payload.type} notification to ${payload.to} (org: ${orgId}, user: ${userId})`,
+    );
+
     let providerResponse: any = undefined;
 
     try {
@@ -70,7 +92,7 @@ export class NotificationsService {
               phone: payload.to as string,
               message: payload.message,
             },
-            orgId  // ← FIXED: pass orgId
+            orgId,
           );
           break;
 
@@ -89,7 +111,7 @@ export class NotificationsService {
               templateId: payload.templateId,
               attachments: payload.attachments,
             },
-            orgId  // ← FIXED: pass orgId
+            orgId,
           );
           break;
 
@@ -98,7 +120,7 @@ export class NotificationsService {
             {
               to: payload.to as string,
             },
-            orgId  // ← FIXED: pass orgId
+            orgId,
           );
           break;
 
@@ -122,7 +144,11 @@ export class NotificationsService {
         payload.message?.substring(0, 100) || '',
         payload.message?.length || 0,
         1, // cost
-        // payload.attachments?.map(a => ({ filename: a.filename, contentType: a.contentType })),
+        payload.attachments?.map((a) => ({ filename: a.filename, contentType: a.contentType || 'application/octet-stream' })),
+        undefined, // campaignId
+        undefined, // scheduledAt
+        'sent',
+        payload.message,
       );
 
       this.logger.log(`Successfully sent ${payload.type} to ${recipient}`);
@@ -144,6 +170,11 @@ export class NotificationsService {
           payload.message?.substring(0, 100) || '',
           payload.message?.length || 0,
           0, // no cost on failure
+          payload.attachments?.map((a) => ({ filename: a.filename, contentType: a.contentType || 'application/octet-stream' })),
+          undefined, // campaignId
+          undefined, // scheduledAt
+          'failed',
+          payload.message,
         );
       } catch (logError) {
         this.logger.error(`Failed to log failure: ${logError?.message || logError}`);
@@ -152,6 +183,29 @@ export class NotificationsService {
       this.logger.error(`Failed to send ${payload.type} to ${recipient}: ${error.message}`);
       throw error;
     }
+  }
+
+  async sendNow(logId: string, orgId: string, userId: string): Promise<void> {
+    const log = await this.messageLogsService.findLogById(logId);
+    if (!log) {
+      throw new BadRequestException('Log not found');
+    }
+    if (log.status !== 'scheduled') {
+      throw new BadRequestException('Message is not scheduled');
+    }
+
+    // Prepare payload from log
+    const payload: NotificationPayload = {
+      type: log.channel as any,
+      to: log.recipients.map((r) => r.recipient),
+      message: log.fullMessage || log.messagePreview,
+    };
+
+    // For now, let's assume messagePreview is the full message for simplicity or fix the schema.
+    // Actually, I should probably add fullMessage to the schema if I want to support scheduling properly.
+
+    await this.sendNotification(payload, orgId, userId);
+    await this.messageLogsService.updateLogStatus(logId, 'sent');
   }
 
   async sendNotificationToUsers(
