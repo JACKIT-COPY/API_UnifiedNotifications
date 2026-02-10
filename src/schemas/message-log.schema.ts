@@ -5,6 +5,9 @@ import { NotificationType } from 'src/integrations/interfaces/notification.inter
 
 @Schema({ timestamps: true })
 export class MessageLog extends Document {
+  createdAt: Date;
+  updatedAt: Date;
+
   @Prop({ required: true, enum: NotificationType })
   channel: NotificationType;
 
