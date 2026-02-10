@@ -1,9 +1,10 @@
-// src/main.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import * as bodyParser from 'body-parser';
 import { Logger } from '@nestjs/common';
+
+process.env.TZ = 'Africa/Nairobi';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -19,30 +20,30 @@ async function bootstrap() {
   // === ENABLE CORS ===
   app.enableCors({
     origin: [
-      'http://localhost:3000', // For when frontend and backend on same port (rare)
-      'http://localhost:3001', // Common Next.js dev port
+      'http://localhost:3000',
+      'http://localhost:3001',
       'http://localhost:3002',
-      'https://unified-notifications-admin.vercel.app', // Admin actual Vercel URL
-      'https://v0-imflow-website-design.vercel.app', // Client actual Vercel URL
+      'https://unified-notifications-admin.vercel.app',
+      'https://v0-imflow-website-design.vercel.app',
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true, // Important if using cookies/sessions later
+    credentials: true,
   });
 
   // === GLOBAL VALIDATION ===
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
-      whitelist: true, // 🔒 strips unknown fields
-      forbidNonWhitelisted: false, // set true later if you want strict mode
+      whitelist: true,
+      forbidNonWhitelisted: false,
     }),
   );
 
   const port = process.env.PORT || 3040;
   await app.listen(port, '0.0.0.0');
 
-  console.log(`🚀 NotifyHub backend running on port ${port}`);
+  console.log(`🚀 NotifyHub backend running on port ${port} (TZ: ${process.env.TZ})`);
 }
 
 bootstrap();
