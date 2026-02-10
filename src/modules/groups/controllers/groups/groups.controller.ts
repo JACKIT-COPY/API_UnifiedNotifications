@@ -1,11 +1,11 @@
 import { Controller, Get, Post, Delete, Body, Param, Request, UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
+import { CombinedAuthGuard } from 'src/modules/auth/guards/combined-auth.guard';
 import { GroupsService } from '../../services/groups/groups.service';
 
 @Controller('groups')
-@UseGuards(JwtAuthGuard)
+@UseGuards(CombinedAuthGuard)
 export class GroupsController {
-  constructor(private groupsService: GroupsService) {}
+  constructor(private groupsService: GroupsService) { }
 
   @Post('')
   async createGroup(@Body() payload: any, @Request() req) {

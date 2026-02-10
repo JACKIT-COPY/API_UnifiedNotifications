@@ -43,7 +43,15 @@ This project is built with NestJS, using modules for modularity and dependency i
    - Development mode: `npm run start:dev`
    - Production mode: `npm run start:prod`
 
-The server runs on `http://localhost:3000` by default.
+The server runs on `http://localhost:3040` by default.
+
+## Authentication (API Keys)
+For external developers and server-to-server integrations, we support **API Key** authentication. 
+
+You can manage your API keys from the **Developers > API Keys** section of the dashboard. Once you have a key, you can use it to access endpoints securely without requiring a browser session.
+
+For detailed documentation and examples, see the [**API Guide**](./API_GUIDE.md).
+
 
 ## Configuration (.env)
 Copy the following template to `.env` and fill in your credentials:
