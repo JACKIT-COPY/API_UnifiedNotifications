@@ -107,7 +107,12 @@ export class TransactionsService {
 
         // 6. Handle M-Pesa STK Push
         try {
-            const phoneNumber = dto.phoneNumber.startsWith('+') ? dto.phoneNumber.substring(1) : dto.phoneNumber;
+            let phoneNumber = dto.phoneNumber.replace(/\D/g, '');
+            if (phoneNumber.startsWith('0')) {
+                phoneNumber = '254' + phoneNumber.substring(1);
+            } else if (phoneNumber.length === 9) {
+                phoneNumber = '254' + phoneNumber;
+            }
 
             // Generate Access Token
             const auth = Buffer.from(`${paymentMethod.consumerKey}:${paymentMethod.consumerSecret}`).toString('base64');
@@ -130,11 +135,6 @@ export class TransactionsService {
             ).toString('base64');
 
             // STK Push Request
-            const stkPushUrl = paymentMethod.environment === 'sandbox'
-                ? 'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/query' // Wait, this is query. Correct is /v1/processrequest
-                : 'https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest';
-
-            // Correction: both use processrequest
             const processRequestUrl = paymentMethod.environment === 'sandbox'
                 ? 'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest'
                 : 'https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest';
