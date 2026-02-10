@@ -27,6 +27,12 @@ export class PaymentMethod {
     @Prop({ required: true })
     consumerSecret: string; // Encrypted in production
 
+    @Prop({ required: true, enum: ['paybill', 'till'], default: 'paybill' })
+    mpesaType: string;
+
+    @Prop({ required: false })
+    storeNumber?: string; // For Buy Goods (Till), BusinessShortCode should be Store Number
+
     @Prop({ required: true, enum: ['sandbox', 'production'], default: 'production' })
     environment: string;
 
