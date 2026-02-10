@@ -14,6 +14,9 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { SystemLogsModule } from './modules/system-logs/system-logs.module';
 import { TemplatesModule } from './modules/templates/templates.module';
+import { PaymentMethodsModule } from './modules/payment-methods/payment-methods.module';
+import { TransactionsModule } from './modules/transactions/transactions.module';
+import { UsageModule } from './modules/usage/usage.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { LoggingInterceptor } from './modules/system-logs/interceptors/logging.interceptor';
 
@@ -41,6 +44,9 @@ import { ScheduleModule } from '@nestjs/schedule';
     CampaignsModule,
     SystemLogsModule,
     TemplatesModule,
+    PaymentMethodsModule,
+    TransactionsModule,
+    UsageModule,
   ],
   controllers: [AppController],
   providers: [
