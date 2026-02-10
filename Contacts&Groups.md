@@ -22,6 +22,17 @@ Content-Type: application/json
 
 Unauthorized requests return `401 Unauthorized`.
 
+### Alternate: API Key
+You can also use an **API Key** passed in the `X-API-Key` header or `apikey` query parameter. This is recommended for automated systems.
+```bash
+# Header
+X-API-Key: your_api_key
+
+# Query Param
+GET /contacts?apikey=your_api_key
+```
+See [API_GUIDE.md](./API_GUIDE.md) for more details.
+
 ---
 
 ## Groups API

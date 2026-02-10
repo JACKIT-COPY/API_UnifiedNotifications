@@ -1,0 +1,265 @@
+{
+    "info": {
+        "_postman_id": "unified-notifications-api-keys",
+        "name": "Unified Notifications - API Keys",
+        "description": "Collection to test API Key generation and usage for the Unified Notifications system.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "1. Admin Login (Get Token)",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "var jsonData = pm.response.json();",
+                            "pm.environment.set(\"jwt_token\", jsonData.token);",
+                            "console.log(\"Token set to:\", jsonData.token);"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"email\": \"admin@example.com\",\n    \"password\": \"password123\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/auth/login",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "auth",
+                        "login"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "2. Generate API Key",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "var jsonData = pm.response.json();",
+                            "// Save the generated key to environment variable for subsequent requests",
+                            "pm.environment.set(\"generated_api_key\", jsonData.key);",
+                            "pm.environment.set(\"key_id\", jsonData.id);",
+                            "console.log(\"API Key generated:\", jsonData.key);"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "auth": {
+                    "type": "bearer",
+                    "bearer": [
+                        {
+                            "key": "token",
+                            "value": "{{jwt_token}}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"name\": \"Postman Test Key\",\n    \"permissions\": [\"*\"]\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/api-keys",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "api-keys"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "3. List API Keys",
+            "request": {
+                "auth": {
+                    "type": "bearer",
+                    "bearer": [
+                        {
+                            "key": "token",
+                            "value": "{{jwt_token}}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{baseUrl}}/api-keys",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "api-keys"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "4. Send Notification (Query Param Auth)",
+            "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"type\": \"sms\",\n    \"to\": \"254712345678\",\n    \"message\": \"Hello! This is a test message using API Key via query param.\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/notifications/send?apikey={{generated_api_key}}",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "notifications",
+                        "send"
+                    ],
+                    "query": [
+                        {
+                            "key": "apikey",
+                            "value": "{{generated_api_key}}",
+                            "description": "API Key passed as query parameter"
+                        }
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "5. Send Notification (Header Auth)",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "X-API-Key",
+                        "value": "{{generated_api_key}}",
+                        "type": "text",
+                        "description": "API Key passed in header"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"type\": \"sms\",\n    \"to\": \"254712345678\",\n    \"message\": \"Hello! This is a test message using API Key via X-API-Key header.\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/notifications/send",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "notifications",
+                        "send"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "6. Revoke API Key",
+            "request": {
+                "auth": {
+                    "type": "bearer",
+                    "bearer": [
+                        {
+                            "key": "token",
+                            "value": "{{jwt_token}}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "method": "PUT",
+                "header": [],
+                "url": {
+                    "raw": "{{baseUrl}}/api-keys/{{key_id}}/revoke",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "api-keys",
+                        "{{key_id}}",
+                        "revoke"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "7. Test Revoked Key (Should Fail)",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "X-API-Key",
+                        "value": "{{generated_api_key}}",
+                        "type": "text"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"type\": \"sms\",\n    \"to\": \"254712345678\",\n    \"message\": \"This should fail.\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/notifications/send",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "notifications",
+                        "send"
+                    ]
+                }
+            },
+            "response": []
+        }
+    ],
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:3040",
+            "type": "string"
+        }
+    ]
+}

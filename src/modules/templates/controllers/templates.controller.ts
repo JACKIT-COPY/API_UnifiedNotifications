@@ -1,11 +1,11 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Request, UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
+import { CombinedAuthGuard } from 'src/modules/auth/guards/combined-auth.guard';
 import { TemplatesService } from '../services/templates.service';
 import { CreateTemplateDto } from '../dto/create-template.dto';
 import { UpdateTemplateDto } from '../dto/update-template.dto';
 
 @Controller('templates')
-@UseGuards(JwtAuthGuard)
+@UseGuards(CombinedAuthGuard)
 export class TemplatesController {
     constructor(private templatesService: TemplatesService) { }
 

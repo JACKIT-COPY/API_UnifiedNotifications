@@ -17,6 +17,7 @@ import { TemplatesModule } from './modules/templates/templates.module';
 import { PaymentMethodsModule } from './modules/payment-methods/payment-methods.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
 import { UsageModule } from './modules/usage/usage.module';
+import { ApiKeysModule } from './modules/api-keys/api-keys.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { LoggingInterceptor } from './modules/system-logs/interceptors/logging.interceptor';
 
@@ -47,6 +48,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     PaymentMethodsModule,
     TransactionsModule,
     UsageModule,
+    ApiKeysModule,
   ],
   controllers: [AppController],
   providers: [

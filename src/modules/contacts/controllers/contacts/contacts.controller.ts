@@ -1,11 +1,11 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Request, UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
+import { CombinedAuthGuard } from 'src/modules/auth/guards/combined-auth.guard';
 import { ContactsService } from '../../services/contacts/contacts.service';
 
 @Controller('contacts')
-@UseGuards(JwtAuthGuard)
+@UseGuards(CombinedAuthGuard)
 export class ContactsController {
-  constructor(private contactsService: ContactsService) {}
+  constructor(private contactsService: ContactsService) { }
 
   @Post('')
   async createContact(@Body() payload: any, @Request() req) {

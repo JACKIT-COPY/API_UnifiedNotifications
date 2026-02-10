@@ -1,5 +1,5 @@
-// src/modules/auth/auth.module.ts (new)
-import { Module } from '@nestjs/common';
+// src/modules/auth/auth.module.ts
+import { Global, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -10,6 +10,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { UserSchema } from 'src/schemas/user.schema';
 import { OrganizationSchema } from 'src/schemas/organization.schema';
 
+@Global()
 @Module({
   imports: [
     MongooseModule.forFeature([

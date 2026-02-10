@@ -18,16 +18,25 @@ async function bootstrap() {
   app.useLogger(new Logger());
 
   // === ENABLE CORS ===
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:3002',
+    'https://unified-notifications-admin.vercel.app',
+    'https://v0-imflow-website-design.vercel.app',
+  ];
+
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:3002',
-      'https://unified-notifications-admin.vercel.app',
-      'https://v0-imflow-website-design.vercel.app',
-    ],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g., server-to-server API calls, curl, Postman)
+      if (!origin) return callback(null, true);
+      // Allow whitelisted dashboard origins
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      // Block unknown browser origins (API key users use server-to-server, not browser)
+      return callback(null, false);
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'UNIFIED-API-Key'],
     credentials: true,
   });
 
