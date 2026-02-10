@@ -23,7 +23,10 @@ export class MessageLogsService {
     messageLength: number,
     cost: number,
     attachments?: { filename: string; contentType: string }[],
-    campaignId?: string,  // ← Optional campaignId
+    campaignId?: string,
+    scheduledAt?: Date,
+    status: string = 'sent',
+    fullMessage?: string,
   ): Promise<MessageLog> {
     const log = new this.messageLogModel({
       channel,
@@ -32,10 +35,13 @@ export class MessageLogsService {
       network,
       recipients,
       messagePreview,
+      fullMessage,
       messageLength,
       cost,
       attachments,
       campaignId: campaignId ? new Types.ObjectId(campaignId) : null,
+      scheduledAt,
+      status,
     });
     const savedLog = await log.save();
 
@@ -51,7 +57,12 @@ export class MessageLogsService {
   ): Promise<MessageLog[]> {
     const query: any = { senderOrgId: orgId };
     if (filters.channel) query.channel = filters.channel;
-    if (filters.status) query['recipients.status'] = filters.status;
+    if (filters.status) {
+      query.$or = [
+        { status: filters.status },
+        { 'recipients.status': filters.status }
+      ];
+    }
     if (filters.dateFrom) query.createdAt = { $gte: filters.dateFrom };
     if (filters.dateTo) query.createdAt = { ...query.createdAt || {}, $lte: filters.dateTo };
     return this.messageLogModel.find(query).sort({ createdAt: -1 }).exec();
@@ -60,7 +71,12 @@ export class MessageLogsService {
   async getAllLogs(filters: { channel?: NotificationType; status?: string; dateFrom?: Date; dateTo?: Date }): Promise<MessageLog[]> {
     const query: any = {};
     if (filters.channel) query.channel = filters.channel;
-    if (filters.status) query['recipients.status'] = filters.status;
+    if (filters.status) {
+      query.$or = [
+        { status: filters.status },
+        { 'recipients.status': filters.status }
+      ];
+    }
     if (filters.dateFrom) query.createdAt = { $gte: new Date(filters.dateFrom) };
     if (filters.dateTo) query.createdAt = { ...query.createdAt || {}, $lte: new Date(filters.dateTo) };
     return this.messageLogModel.find(query)
@@ -76,5 +92,37 @@ export class MessageLogsService {
       campaignId: new Types.ObjectId(campaignId),
       senderOrgId: orgId,
     } as any).exec();
+  }
+
+  async updateLogStatus(
+    logId: string,
+    status: string,
+    recipients?: { recipient: string; status: string; error?: string; response?: string }[],
+  ): Promise<MessageLog | null> {
+    const update: any = { status };
+    if (recipients) update.recipients = recipients;
+
+    const updatedLog = await this.messageLogModel.findByIdAndUpdate(
+      logId,
+      update,
+      { new: true }
+    );
+
+    if (updatedLog) {
+      this.logsGateway.sendNewLog(updatedLog);
+    }
+
+    return updatedLog;
+  }
+
+  async findScheduledLogs(): Promise<MessageLog[]> {
+    return this.messageLogModel.find({
+      status: 'scheduled',
+      scheduledAt: { $lte: new Date() }
+    }).exec();
+  }
+
+  async findLogById(id: string): Promise<MessageLog | null> {
+    return this.messageLogModel.findById(id).exec();
   }
 }
