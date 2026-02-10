@@ -35,6 +35,7 @@ export class NotificationsService {
     payload: NotificationPayload,
     orgId: string,
     userId: string,
+    logId?: string,
   ): Promise<void> {
     const recipient = Array.isArray(payload.to) ? payload.to[0] : payload.to;
 
@@ -53,7 +54,14 @@ export class NotificationsService {
     };
 
     // If scheduled for later, just log it as scheduled
-    if (payload.scheduledAt && new Date(payload.scheduledAt) > new Date()) {
+    if (payload.scheduledAt) {
+      const scheduledDate = new Date(payload.scheduledAt);
+      const now = new Date();
+
+      if (scheduledDate <= now) {
+        throw new BadRequestException('Scheduled time must be in the future');
+      }
+
       this.logger.log(
         `Scheduling ${payload.type} notification to ${payload.to} at ${payload.scheduledAt} (org: ${orgId}, user: ${userId})`,
       );
@@ -180,6 +188,9 @@ export class NotificationsService {
         this.logger.error(`Failed to log failure: ${logError?.message || logError}`);
       }
 
+      if (logId) {
+        await this.messageLogsService.updateLogStatus(logId, 'failed');
+      }
       this.logger.error(`Failed to send ${payload.type} to ${recipient}: ${error.message}`);
       throw error;
     }

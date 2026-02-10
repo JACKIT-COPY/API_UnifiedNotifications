@@ -23,6 +23,9 @@ export class SchedulingService {
         this.logger.log(`Found ${scheduledLogs.length} scheduled notifications to send.`);
 
         for (const log of scheduledLogs) {
+            // Extra safety: only process if it's still marked as processing
+            if (log.status !== 'processing') continue;
+
             try {
                 this.logger.log(`Sending scheduled notification ${log._id}`);
 
@@ -36,6 +39,7 @@ export class SchedulingService {
                     payload,
                     log.senderOrgId.toString(),
                     log.senderUserId.toString(),
+                    log._id.toString(),
                 );
 
                 await this.messageLogsService.updateLogStatus(log._id.toString(), 'sent');
