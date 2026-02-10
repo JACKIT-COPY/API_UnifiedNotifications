@@ -10,6 +10,7 @@ import {
     HttpCode,
     HttpStatus,
     Query,
+    ForbiddenException,
 } from '@nestjs/common';
 import { TransactionsService } from '../../services/transactions/transactions.service';
 import { InitiatePaymentDto } from '../../dto/initiate-payment.dto';
@@ -36,8 +37,16 @@ export class TransactionsController {
      * GET /transactions/organization/:orgId
      */
     @Get('organization/:orgId')
-    @UseGuards(JwtAuthGuard, AdminGuard)
-    async findByOrganization(@Param('orgId') orgId: string) {
+    @UseGuards(JwtAuthGuard)
+    async findByOrganization(@Param('orgId') orgId: string, @Req() req: any) {
+        const user = req.user;
+
+        // Super-admin can view any organization's transactions
+        // Admin/User can only view their own organization's transactions
+        if (user.role !== 'superadmin' && user.orgId !== orgId) {
+            throw new ForbiddenException('You do not have access to these transactions');
+        }
+
         return this.transactionsService.findByOrganization(orgId);
     }
 
@@ -47,9 +56,16 @@ export class TransactionsController {
      */
     @Get(':id')
     @UseGuards(JwtAuthGuard)
-    async findOne(@Param('id') id: string) {
-        // Ideally check if user belongs to org of transaction, or is super admin
-        return this.transactionsService.findOne(id);
+    async findOne(@Param('id') id: string, @Req() req: any) {
+        const transaction = await this.transactionsService.findOne(id);
+        const user = req.user;
+
+        // Check ownership
+        if (user.role !== 'superadmin' && user.orgId !== (transaction as any).organizationId?._id?.toString() && user.orgId !== (transaction as any).organizationId?.toString()) {
+            throw new ForbiddenException('You do not have access to this transaction');
+        }
+
+        return transaction;
     }
 
     /**
