@@ -4,7 +4,7 @@ import { NotificationsService } from '../../services/notifications/notifications
 import { NotificationPayload, NotificationType } from 'src/integrations/interfaces/notification.interface';
 import { IsEnum, IsNotEmpty, IsOptional, IsString, ValidateIf, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
+import { CombinedAuthGuard } from 'src/modules/auth/guards/combined-auth.guard';
 
 class AttachmentDto {
   @IsString()
@@ -62,7 +62,7 @@ interface NotificationResult {
 }
 
 @Controller('notifications')
-@UseGuards(JwtAuthGuard)  // All notification endpoints now require auth
+@UseGuards(CombinedAuthGuard)  // Accepts both JWT tokens and API keys
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) { }
 
