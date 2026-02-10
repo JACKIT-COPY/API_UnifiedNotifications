@@ -114,24 +114,43 @@ export class TransactionsService {
                 phoneNumber = '254' + phoneNumber;
             }
 
+            // Determine Transaction Parameters
+            // If the user called it "Paybill" in the name, we should probably prefer paybill type
+            // But let's look at the mpesaType field first
+            const mpesaType = paymentMethod.mpesaType || (paymentMethod.shortcode.length > 6 ? 'till' : 'paybill');
+            const transactionType = mpesaType === 'till' ? 'CustomerBuyGoodsOnline' : 'CustomerPayBillOnline';
+
+            // For Till Numbers, BusinessShortCode should be the Store Number
+            // If not provided, fallback to shortcode (but this might cause Error 2002)
+            const businessShortCode = mpesaType === 'till'
+                ? (paymentMethod.storeNumber || paymentMethod.shortcode)
+                : paymentMethod.shortcode;
+
+            const partyB = paymentMethod.shortcode;
+
             // Generate Access Token
             const auth = Buffer.from(`${paymentMethod.consumerKey}:${paymentMethod.consumerSecret}`).toString('base64');
             const tokenUrl = paymentMethod.environment === 'sandbox'
                 ? 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials'
                 : 'https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials';
 
+            console.log(`[M-Pesa] Fetching token for ${paymentMethod.name} (${paymentMethod.environment})`);
+
             const tokenResponse = await firstValueFrom(
                 this.httpService.get(tokenUrl, {
                     headers: { Authorization: `Basic ${auth}` }
                 })
-            );
+            ).catch(err => {
+                console.error('[M-Pesa] Token fetch failed:', err.response?.data || err.message);
+                throw err;
+            });
 
             const accessToken = tokenResponse.data.access_token;
 
             // Generate Password
             const timestamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
             const password = Buffer.from(
-                `${paymentMethod.shortcode}${paymentMethod.passkey}${timestamp}`
+                `${businessShortCode}${paymentMethod.passkey}${timestamp}`
             ).toString('base64');
 
             // STK Push Request
@@ -142,37 +161,58 @@ export class TransactionsService {
             const callbackUrl = process.env.MPESA_CALLBACK_URL || 'https://your-domain.com/transactions/callback';
 
             const stkData = {
-                BusinessShortCode: paymentMethod.shortcode,
+                BusinessShortCode: businessShortCode,
                 Password: password,
                 Timestamp: timestamp,
-                TransactionType: paymentMethod.shortcode.length > 5 ? 'CustomerBuyGoodsOnline' : 'CustomerPayBillOnline',
+                TransactionType: transactionType,
                 Amount: Math.round(dto.amount),
                 PartyA: phoneNumber,
-                PartyB: paymentMethod.shortcode,
+                PartyB: partyB,
                 PhoneNumber: phoneNumber,
                 CallBackURL: callbackUrl,
                 AccountReference: `Topup-${org.name.replace(/\s+/g, '')}`.slice(0, 12),
                 TransactionDesc: `Token Purchase for ${org.name}`.slice(0, 20)
             };
 
+            console.log(`[M-Pesa] Sending STK Push Request to ${processRequestUrl}:`, JSON.stringify(stkData));
+
             const stkResponse = await firstValueFrom(
                 this.httpService.post(processRequestUrl, stkData, {
                     headers: { Authorization: `Bearer ${accessToken}` }
                 })
-            );
+            ).catch(err => {
+                console.error('[M-Pesa] STK Push failed:', err.response?.data || err.message);
+                throw err;
+            });
+
+            console.log(`[M-Pesa] STK Push Response:`, JSON.stringify(stkResponse.data));
 
             // Update transaction with M-Pesa details
             transaction.checkoutRequestId = stkResponse.data.CheckoutRequestID;
             transaction.merchantRequestId = stkResponse.data.MerchantRequestID;
+            transaction.metadata = {
+                ...transaction.metadata,
+                stkRequest: stkData,
+                stkResponse: stkResponse.data,
+                mpesaType,
+                transactionType,
+                businessShortCode,
+                partyB,
+                initiatedAt: new Date()
+            };
             await transaction.save();
 
             return transaction;
         } catch (error) {
-            console.error('M-Pesa STK Push Error:', error.response?.data || error.message);
-            // Don't fail the whole request, but return the transaction as pending/failed
-            // In a real scenario, you might want to throw if STK push fails to initiate
+            const errorData = error.response?.data || error.message;
+            console.error('[M-Pesa] Final Error Trace:', errorData);
+
             transaction.status = 'failed';
-            transaction.metadata = { ...transaction.metadata, error: error.response?.data || error.message };
+            transaction.metadata = {
+                ...transaction.metadata,
+                error: errorData,
+                failedAt: new Date()
+            };
             await transaction.save();
             throw new BadRequestException(error.response?.data?.CustomerMessage || 'Failed to initiate M-Pesa payment');
         }
@@ -182,32 +222,57 @@ export class TransactionsService {
      * Handle M-Pesa Callback
      */
     async handleCallback(payload: any) {
+        console.log('[M-Pesa] Raw Callback Payload:', JSON.stringify(payload));
+
+        if (!payload.Body || !payload.Body.stkCallback) {
+            console.error('[M-Pesa] Invalid callback payload format');
+            return { ResultCode: 1, ResultDesc: 'Invalid payload' };
+        }
+
         const stkCallback = payload.Body.stkCallback;
         const checkoutRequestId = stkCallback.CheckoutRequestID;
         const resultCode = stkCallback.ResultCode;
 
+        console.log(`[M-Pesa] Processing callback for CheckoutRequestID: ${checkoutRequestId}, ResultCode: ${resultCode}`);
+
         const transaction = await this.transactionModel.findOne({ checkoutRequestId });
         if (!transaction) {
-            console.error(`Transaction not found for CheckoutRequestID: ${checkoutRequestId}`);
+            console.error(`[M-Pesa] Transaction not found for CheckoutRequestID: ${checkoutRequestId}`);
             return { ResultCode: 1, ResultDesc: 'Transaction not found' };
         }
+
+        // Store full callback in metadata
+        transaction.metadata = {
+            ...transaction.metadata,
+            callbackPayload: payload,
+            callbackAt: new Date()
+        };
 
         if (resultCode === 0) {
             // Success
             transaction.status = 'completed';
 
             // Extract MpesaReceiptNumber
-            const callbackMetadata = stkCallback.CallbackMetadata.Item;
-            const mpesaReference = callbackMetadata.find(item => item.Name === 'MpesaReceiptNumber')?.Value;
-            transaction.mpesaReference = mpesaReference;
+            const callbackMetadata = stkCallback.CallbackMetadata?.Item;
+            if (callbackMetadata) {
+                const mpesaReference = callbackMetadata.find(item => item.Name === 'MpesaReceiptNumber')?.Value;
+                transaction.mpesaReference = mpesaReference;
+            }
 
             await transaction.save();
+            console.log(`[M-Pesa] Transaction ${transaction._id} completed successfully`);
 
             // UPDATE ORGANIZATION CREDITS
-            await this.organizationsService.updateCredits(
-                transaction.organizationId,
-                transaction.tokens
-            );
+            try {
+                await this.organizationsService.updateCredits(
+                    transaction.organizationId,
+                    transaction.tokens
+                );
+                console.log(`[M-Pesa] Credits updated for Org ${transaction.organizationId}`);
+            } catch (credError) {
+                console.error(`[M-Pesa] Failed to update credits for transaction ${transaction._id}:`, credError.message);
+                // We don't change transaction status to failed here because payment WAS successful
+            }
         } else {
             // Failed
             transaction.status = 'failed';
@@ -217,6 +282,7 @@ export class TransactionsService {
                 resultCode: resultCode
             };
             await transaction.save();
+            console.log(`[M-Pesa] Transaction ${transaction._id} marked as failed: ${stkCallback.ResultDesc}`);
         }
 
         return { ResultCode: 0, ResultDesc: 'Success' };

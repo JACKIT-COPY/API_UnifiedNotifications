@@ -22,6 +22,14 @@ export class CreatePaymentMethodDto {
     @IsNotEmpty()
     consumerSecret: string;
 
+    @IsEnum(['paybill', 'till'])
+    @IsOptional()
+    mpesaType?: string;
+
+    @IsString()
+    @IsOptional()
+    storeNumber?: string;
+
     @IsEnum(['sandbox', 'production'])
     @IsOptional()
     environment?: string;
