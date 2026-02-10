@@ -6,13 +6,13 @@
 
 **In your cPanel or DNS provider:**
 
-Add A Record:
-- **Name**: `api` (or `api.sms.lancolatech.co.ke`)
+Update A Record:
+- **Name**: `@` (or `sms.lancolatech.co.ke`)
 - **Type**: A
 - **Value**: Your DigitalOcean droplet IP
 - **TTL**: 3600
 
-Verify: `nslookup api.sms.lancolatech.co.ke`
+Verify: `nslookup sms.lancolatech.co.ke`
 
 ---
 
@@ -93,7 +93,7 @@ chmod +x scripts/init-ssl.sh
 ./scripts/init-ssl.sh
 ```
 
-✅ Visit: `https://api.sms.lancolatech.co.ke`
+✅ Visit: `https://sms.lancolatech.co.ke`
 
 ---
 
@@ -132,8 +132,8 @@ Watch at: GitHub → Actions tab
 ## ✅ Verification Checklist
 
 - [ ] DNS resolves to droplet IP
-- [ ] `https://api.sms.lancolatech.co.ke` shows valid SSL
-- [ ] Health check works: `https://api.sms.lancolatech.co.ke/health`
+- [ ] `https://sms.lancolatech.co.ke` shows valid SSL
+- [ ] Health check works: `https://sms.lancolatech.co.ke/health`
 - [ ] GitHub Actions deployment succeeds
 - [ ] MongoDB is running: `docker-compose ps`
 - [ ] Logs are clean: `docker-compose logs -f`

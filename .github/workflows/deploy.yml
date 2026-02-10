@@ -59,7 +59,7 @@ jobs:
 
       - name: Deployment Status
         if: success()
-        run: echo "Deployment successful! API is live at https://api.sms.lancolatech.co.ke"
+        run: echo "Deployment successful! API is live at https://sms.lancolatech.co.ke"
 
       - name: Deployment Failed
         if: failure()

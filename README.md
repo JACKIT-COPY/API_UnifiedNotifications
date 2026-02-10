@@ -4,7 +4,7 @@ A comprehensive NestJS-based notification service supporting Email, SMS, and Wha
 
 ## 🚀 Quick Links
 
-- **Production API**: https://api.sms.lancolatech.co.ke
+- **Production API**: https://sms.lancolatech.co.ke
 - **Quick Start Guide**: [QUICK-START.md](QUICK-START.md)
 - **Full Deployment Guide**: [DEPLOYMENT.md](DEPLOYMENT.md)
 

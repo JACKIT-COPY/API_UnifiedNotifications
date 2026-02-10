@@ -43,7 +43,7 @@ echo "Cleaning up old images..."
 docker image prune -f
 
 echo "Deployment completed successfully!"
-echo "API is running at https://api.sms.lancolatech.co.ke"
+echo "API is running at https://sms.lancolatech.co.ke"
 
 # Show logs
 docker-compose logs --tail=50 api

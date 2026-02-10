@@ -33,16 +33,16 @@ This guide provides step-by-step instructions for deploying the Unified Notifica
 
 ## DNS Configuration
 
-### Step 1: Configure Subdomain
+### Step 1: Configure Domain
 
-You need to point `api.sms.lancolatech.co.ke` to your DigitalOcean droplet while keeping `sms.lancolatech.co.ke` on cPanel.
+You need to point `sms.lancolatech.co.ke` to your DigitalOcean droplet.
 
 #### Option A: Using cPanel DNS (If you control DNS)
 
 1. Log into your cPanel account
 2. Navigate to **Zone Editor** or **Advanced DNS Zone Editor**
-3. Add an **A Record**:
-   - **Name/Host**: `api.sms.lancolatech.co.ke` or just `api`
+3. Update the **A Record**:
+   - **Name/Host**: `@` or `sms.lancolatech.co.ke`
    - **Type**: A
    - **Points to/Value**: Your DigitalOcean droplet IP address
    - **TTL**: 3600 (1 hour)
@@ -53,7 +53,7 @@ You need to point `api.sms.lancolatech.co.ke` to your DigitalOcean droplet while
 1. Go to DigitalOcean Dashboard → Networking → Domains
 2. Add domain: `sms.lancolatech.co.ke`
 3. Create an **A record**:
-   - **Hostname**: `api`
+   - **Hostname**: `@`
    - **Will Direct to**: Your droplet
    - **TTL**: 3600 seconds
 4. Update your domain registrar's nameservers to:
@@ -64,14 +64,13 @@ You need to point `api.sms.lancolatech.co.ke` to your DigitalOcean droplet while
 #### Option C: Using Cloudflare (Recommended for better performance)
 
 1. Add your domain to Cloudflare
-2. Create an **A record**:
+2. Update the **A record**:
    - **Type**: A
-   - **Name**: `api`
+   - **Name**: `@`
    - **IPv4 address**: Your DigitalOcean droplet IP
    - **Proxy status**: DNS only (click the cloud icon to make it gray)
    - **TTL**: Auto
-3. Keep your main domain (`@` or `sms.lancolatech.co.ke`) pointed to cPanel
-4. Update nameservers at your domain registrar to Cloudflare's nameservers
+3. Update nameservers at your domain registrar to Cloudflare's nameservers
 
 ### Step 2: Verify DNS Propagation
 
@@ -79,10 +78,10 @@ Wait 5-30 minutes for DNS to propagate, then verify:
 
 ```bash
 # Check DNS resolution
-nslookup api.sms.lancolatech.co.ke
+nslookup sms.lancolatech.co.ke
 
 # Or use dig
-dig api.sms.lancolatech.co.ke
+dig sms.lancolatech.co.ke
 ```
 
 You should see your DigitalOcean droplet IP address in the response.
@@ -235,7 +234,7 @@ docker-compose logs -f
 
 Before running this, ensure:
 - DNS is properly configured and propagated
-- `api.sms.lancolatech.co.ke` points to your droplet IP
+- `sms.lancolatech.co.ke` points to your droplet IP
 - Ports 80 and 443 are open
 
 ```bash
@@ -251,11 +250,11 @@ nano scripts/init-ssl.sh
 
 ### Step 2: Verify SSL
 
-Visit `https://api.sms.lancolatech.co.ke` in your browser. You should see a valid SSL certificate.
+Visit `https://sms.lancolatech.co.ke` in your browser. You should see a valid SSL certificate.
 
 Test SSL configuration:
 ```bash
-curl -I https://api.sms.lancolatech.co.ke
+curl -I https://sms.lancolatech.co.ke
 ```
 
 ---
@@ -320,7 +319,7 @@ Monitor the deployment:
 docker-compose ps
 
 # Check API health
-curl https://api.sms.lancolatech.co.ke/health
+curl https://sms.lancolatech.co.ke/health
 
 # View logs
 docker-compose logs -f api
@@ -387,7 +386,7 @@ Update [src/main.ts](src/main.ts#L20-L27) to include your production frontend:
 origin: [
   'http://localhost:3000',
   'http://localhost:3001',
-  'https://api.sms.lancolatech.co.ke',
+  'https://sms.lancolatech.co.ke',
   'https://your-frontend-domain.com', // Add your frontend domain
 ],
 ```
@@ -527,4 +526,4 @@ For issues or questions:
 
 ---
 
-**API Endpoint:** `https://api.sms.lancolatech.co.ke`
+**API Endpoint:** `https://sms.lancolatech.co.ke`
