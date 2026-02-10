@@ -5,7 +5,7 @@
 
 set -e
 
-DOMAIN="sms.lancolatech.co.ke"
+DOMAIN="smsapi.solby.io"
 EMAIL="admin@lancolatech.co.ke"  # Change this to your email
 STAGING=0  # Set to 1 for testing with Let's Encrypt staging server
 
