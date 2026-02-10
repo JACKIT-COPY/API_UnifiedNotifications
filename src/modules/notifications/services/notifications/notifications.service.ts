@@ -79,6 +79,7 @@ export class NotificationsService {
         payload.scheduledAt,
         'scheduled',
         payload.message,
+        payload.subject,
       );
       return;
     }
@@ -136,33 +137,8 @@ export class NotificationsService {
           throw new BadRequestException('Invalid or unsupported notification type');
       }
 
-      // Log success
-      await this.messageLogsService.logMessage(
-        payload.type,
-        userId,
-        orgId,
-        networkForChannel(payload.type),
-        [
-          {
-            recipient,
-            status: 'success',
-            response: providerResponse ? JSON.stringify(providerResponse) : undefined,
-          },
-        ],
-        payload.message?.substring(0, 100) || '',
-        payload.message?.length || 0,
-        1, // cost
-        payload.attachments?.map((a) => ({ filename: a.filename, contentType: a.contentType || 'application/octet-stream' })),
-        undefined, // campaignId
-        undefined, // scheduledAt
-        'sent',
-        payload.message,
-      );
-
-      this.logger.log(`Successfully sent ${payload.type} to ${recipient}`);
-    } catch (error) {
-      // Log failure
-      try {
+      // Log success (only if not a scheduled retry, to avoid duplicates)
+      if (!logId) {
         await this.messageLogsService.logMessage(
           payload.type,
           userId,
@@ -171,21 +147,52 @@ export class NotificationsService {
           [
             {
               recipient,
-              status: 'failed',
-              error: error?.message || String(error),
+              status: 'success',
+              response: providerResponse ? JSON.stringify(providerResponse) : undefined,
             },
           ],
           payload.message?.substring(0, 100) || '',
           payload.message?.length || 0,
-          0, // no cost on failure
+          1, // cost
           payload.attachments?.map((a) => ({ filename: a.filename, contentType: a.contentType || 'application/octet-stream' })),
           undefined, // campaignId
           undefined, // scheduledAt
-          'failed',
+          'sent',
           payload.message,
+          payload.subject,
         );
-      } catch (logError) {
-        this.logger.error(`Failed to log failure: ${logError?.message || logError}`);
+      }
+
+      this.logger.log(`Successfully sent ${payload.type} to ${recipient}`);
+    } catch (error) {
+      // Log failure
+      if (!logId) {
+        try {
+          await this.messageLogsService.logMessage(
+            payload.type,
+            userId,
+            orgId,
+            networkForChannel(payload.type),
+            [
+              {
+                recipient,
+                status: 'failed',
+                error: error?.message || String(error),
+              },
+            ],
+            payload.message?.substring(0, 100) || '',
+            payload.message?.length || 0,
+            0, // no cost on failure
+            payload.attachments?.map((a) => ({ filename: a.filename, contentType: a.contentType || 'application/octet-stream' })),
+            undefined, // campaignId
+            undefined, // scheduledAt
+            'failed',
+            payload.message,
+            payload.subject,
+          );
+        } catch (logError) {
+          this.logger.error(`Failed to log failure: ${logError?.message || logError}`);
+        }
       }
 
       if (logId) {

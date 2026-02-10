@@ -27,6 +27,7 @@ export class MessageLogsService {
     scheduledAt?: Date,
     status: string = 'sent',
     fullMessage?: string,
+    subject?: string,
   ): Promise<MessageLog> {
     const log = new this.messageLogModel({
       channel,
@@ -36,6 +37,7 @@ export class MessageLogsService {
       recipients,
       messagePreview,
       fullMessage,
+      subject,
       messageLength,
       cost,
       attachments,

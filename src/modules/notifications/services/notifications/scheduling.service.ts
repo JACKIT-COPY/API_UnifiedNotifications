@@ -31,8 +31,9 @@ export class SchedulingService {
 
                 const payload: NotificationPayload = {
                     type: log.channel as any,
-                    to: log.recipients.map((r) => r.recipient),
+                    to: log.recipients.map((r) => (r as any).recipient),
                     message: log.fullMessage || log.messagePreview,
+                    subject: (log as any).subject,
                 };
 
                 await this.notificationsService.sendNotification(
