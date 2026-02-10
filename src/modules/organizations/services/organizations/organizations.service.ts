@@ -35,4 +35,14 @@ export class OrganizationsService {
     if (!org) throw new NotFoundException('Organization not found');
     return org;
   }
+
+  async updateCredits(id: string, amount: number): Promise<Organization> {
+    const org = await this.orgModel.findByIdAndUpdate(
+      new Types.ObjectId(id),
+      { $inc: { credits: amount } },
+      { new: true }
+    ).exec();
+    if (!org) throw new NotFoundException('Organization not found');
+    return org;
+  }
 }

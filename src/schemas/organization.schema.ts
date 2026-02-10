@@ -4,6 +4,9 @@ import { Document } from 'mongoose';
 
 @Schema({ timestamps: true })
 export class Organization extends Document {
+  createdAt: Date;
+  updatedAt: Date;
+
   @Prop({ required: true, unique: true })
   name: string; // Company name
 
