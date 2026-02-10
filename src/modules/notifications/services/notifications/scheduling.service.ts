@@ -23,19 +23,24 @@ export class SchedulingService {
         this.logger.log(`Found ${scheduledLogs.length} scheduled notifications to send.`);
 
         for (const log of scheduledLogs) {
+            // Extra safety: only process if it's still marked as processing
+            if (log.status !== 'processing') continue;
+
             try {
                 this.logger.log(`Sending scheduled notification ${log._id}`);
 
                 const payload: NotificationPayload = {
                     type: log.channel as any,
-                    to: log.recipients.map((r) => r.recipient),
+                    to: log.recipients.map((r) => (r as any).recipient),
                     message: log.fullMessage || log.messagePreview,
+                    subject: (log as any).subject,
                 };
 
                 await this.notificationsService.sendNotification(
                     payload,
                     log.senderOrgId.toString(),
                     log.senderUserId.toString(),
+                    log._id.toString(),
                 );
 
                 await this.messageLogsService.updateLogStatus(log._id.toString(), 'sent');
