@@ -33,6 +33,20 @@ export class TransactionsController {
     }
 
     /**
+     * Get transactions for the logged-in user's organization
+     * GET /transactions/me
+     */
+    @Get('me')
+    @UseGuards(JwtAuthGuard)
+    async findMyTransactions(@Req() req: any) {
+        const user = req.user;
+        if (!user || !user.orgId) {
+            throw new ForbiddenException('Organization not found for user');
+        }
+        return this.transactionsService.findByOrganization(user.orgId);
+    }
+
+    /**
      * Get transactions for a specific organization (Admin or Super Admin)
      * GET /transactions/organization/:orgId
      */
