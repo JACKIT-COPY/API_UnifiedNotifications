@@ -25,14 +25,24 @@ export class UsageService {
                 $group: {
                     _id: '$senderOrgId',
                     totalTokensUsed: { $sum: '$cost' },
+                    totalMessagesCount: { $sum: 1 },
                     smsCount: {
                         $sum: { $cond: [{ $eq: ['$channel', 'sms'] }, 1, 0] },
+                    },
+                    smsTokens: {
+                        $sum: { $cond: [{ $eq: ['$channel', 'sms'] }, '$cost', 0] },
                     },
                     emailCount: {
                         $sum: { $cond: [{ $eq: ['$channel', 'email'] }, 1, 0] },
                     },
+                    emailTokens: {
+                        $sum: { $cond: [{ $eq: ['$channel', 'email'] }, '$cost', 0] },
+                    },
                     whatsappCount: {
                         $sum: { $cond: [{ $eq: ['$channel', 'whatsapp'] }, 1, 0] },
+                    },
+                    whatsappTokens: {
+                        $sum: { $cond: [{ $eq: ['$channel', 'whatsapp'] }, '$cost', 0] },
                     },
                     lastActivity: { $max: '$createdAt' },
                 },
@@ -61,9 +71,13 @@ export class UsageService {
                 // Let's return both.
                 remainingCredits: org.credits || 0,
                 usedTokens: stats.totalTokensUsed,
+                totalMessagesCount: stats.totalMessagesCount,
                 smsCount: stats.smsCount,
+                smsTokens: stats.smsTokens,
                 emailCount: stats.emailCount,
+                emailTokens: stats.emailTokens,
                 whatsappCount: stats.whatsappCount,
+                whatsappTokens: stats.whatsappTokens,
                 lastActivity: stats.lastActivity || org.updatedAt,
                 // Trend calculation would require historic data, skipping for now
                 trend: 'neutral',
@@ -85,14 +99,24 @@ export class UsageService {
                 $group: {
                     _id: null,
                     totalTokensUsed: { $sum: '$cost' },
+                    totalMessagesCount: { $sum: 1 },
                     smsCount: {
                         $sum: { $cond: [{ $eq: ['$channel', 'sms'] }, 1, 0] },
+                    },
+                    smsTokens: {
+                        $sum: { $cond: [{ $eq: ['$channel', 'sms'] }, '$cost', 0] },
                     },
                     emailCount: {
                         $sum: { $cond: [{ $eq: ['$channel', 'email'] }, 1, 0] },
                     },
+                    emailTokens: {
+                        $sum: { $cond: [{ $eq: ['$channel', 'email'] }, '$cost', 0] },
+                    },
                     whatsappCount: {
                         $sum: { $cond: [{ $eq: ['$channel', 'whatsapp'] }, 1, 0] },
+                    },
+                    whatsappTokens: {
+                        $sum: { $cond: [{ $eq: ['$channel', 'whatsapp'] }, '$cost', 0] },
                     },
                     lastActivity: { $max: '$createdAt' },
                 },
@@ -112,9 +136,13 @@ export class UsageService {
             organizationName: org.name,
             remainingCredits: org.credits || 0,
             usedTokens: stat.totalTokensUsed,
+            totalMessagesCount: stat.totalMessagesCount,
             smsCount: stat.smsCount,
+            smsTokens: stat.smsTokens,
             emailCount: stat.emailCount,
+            emailTokens: stat.emailTokens,
             whatsappCount: stat.whatsappCount,
+            whatsappTokens: stat.whatsappTokens,
             lastActivity: stat.lastActivity || org.updatedAt,
         };
     }
