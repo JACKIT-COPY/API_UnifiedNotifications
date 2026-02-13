@@ -22,9 +22,6 @@ export class OrganizationsController {
     return { message: 'pong', timestamp: new Date().toISOString() };
   }
 
-
-
-
   // Get the current user's organization
   @Get('current')
   async getCurrentOrganization(@Request() req) {
@@ -36,6 +33,24 @@ export class OrganizationsController {
   @UseGuards(AdminGuard)
   async updateCredentials(@Request() req, @Body() credentials: Record<string, string>) {
     return this.organizationsService.updateCredentials(req.user.orgId, credentials);
+  }
+
+  // Get organization stats with detailed information (must come before generic :orgId route)
+  @Get(':orgId/stats')
+  async getOrganizationStats(@Param('orgId') orgId: string, @Request() req) {
+    const user = req.user;
+
+    // Super-admin can access any organization stats
+    if (user.role === 'superadmin') {
+      return this.organizationsService.getOrganizationStats(orgId);
+    }
+
+    // Admins can only access their own organization stats
+    if (user.role === 'admin' && user.orgId === orgId) {
+      return this.organizationsService.getOrganizationStats(orgId);
+    }
+
+    throw new ForbiddenException('You do not have access to this organization');
   }
 
   // Get organization by ID (Admin can view their own, Super-admin can view any)
