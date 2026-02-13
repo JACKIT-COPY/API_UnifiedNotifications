@@ -13,4 +13,8 @@ export class CreateApiKeyDto {
     @IsDateString()
     @IsOptional()
     expiresAt?: string; // Optional expiry date
+
+    @IsString()
+    @IsOptional()
+    organization?: string; // Optional organization id — only allowed for superadmins
 }
