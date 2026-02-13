@@ -104,4 +104,25 @@ export class OrganizationsController {
 
     throw new ForbiddenException('You do not have access to update credentials for this organization');
   }
+
+  // Super-admin: Suspend an organization
+  @Patch(':orgId/suspend')
+  @UseGuards(SuperAdminGuard)
+  async suspendOrganization(@Param('orgId') orgId: string) {
+    return this.organizationsService.setStatus(orgId, 'Suspended');
+  }
+
+  // Super-admin: Unsuspend (activate) an organization
+  @Patch(':orgId/unsuspend')
+  @UseGuards(SuperAdminGuard)
+  async unsuspendOrganization(@Param('orgId') orgId: string) {
+    return this.organizationsService.setStatus(orgId, 'Active');
+  }
+
+  // Super-admin: Soft-delete organization
+  @Patch(':orgId/soft-delete')
+  @UseGuards(SuperAdminGuard)
+  async softDeleteOrganization(@Param('orgId') orgId: string) {
+    return this.organizationsService.softDelete(orgId);
+  }
 }

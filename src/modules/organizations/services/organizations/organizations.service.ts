@@ -25,7 +25,8 @@ export class OrganizationsService {
   }
 
   async findAll(): Promise<Organization[]> {
-    return this.orgModel.find().exec();
+    // Exclude soft-deleted organizations by default
+    return this.orgModel.find({ isDeleted: { $ne: true } }).exec();
   }
 
   async updateCredentials(id: string, newCredentials: Record<string, string>): Promise<Organization> {
@@ -137,5 +138,24 @@ export class OrganizationsService {
       },
       adminDetails,
     };
+  }
+
+  // Super-admin: set organization status (e.g., 'Suspended' or 'Active')
+  async setStatus(id: string, status: string): Promise<Organization> {
+    const org = await this.orgModel.findById(new Types.ObjectId(id));
+    if (!org) throw new NotFoundException('Organization not found');
+
+    org.status = status;
+    return org.save();
+  }
+
+  // Super-admin: soft-delete organization (mark as deleted)
+  async softDelete(id: string): Promise<Organization> {
+    const org = await this.orgModel.findById(new Types.ObjectId(id));
+    if (!org) throw new NotFoundException('Organization not found');
+
+    org.isDeleted = true;
+    org.status = 'Deleted';
+    return org.save();
   }
 }
