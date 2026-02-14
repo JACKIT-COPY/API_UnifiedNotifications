@@ -6,6 +6,7 @@ import { Transaction, TransactionDocument } from 'src/schemas/transaction.schema
 import { PaymentMethodsService } from 'src/modules/payment-methods/services/payment-methods/payment-methods.service';
 import { InitiatePaymentDto } from '../../dto/initiate-payment.dto';
 import { OrganizationsService } from 'src/modules/organizations/services/organizations/organizations.service';
+import { PaymentSessionsService } from 'src/modules/payment-sessions/services/payment-sessions.service';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import * as crypto from 'crypto';
@@ -18,6 +19,7 @@ export class TransactionsService {
         private organizationsService: OrganizationsService,
         private paymentMethodsService: PaymentMethodsService,
         private readonly httpService: HttpService,
+        private paymentSessionsService: PaymentSessionsService,
     ) { }
 
     /**
@@ -84,9 +86,9 @@ export class TransactionsService {
         const tokens = Math.floor(dto.amount * rate);
 
         // 4. Create Pending Transaction Record
-        const transaction = new this.transactionModel({
+        const userId = user._id || user.userId;
+        const transactionData: any = {
             organizationId: orgId,
-            userId: user._id || user.userId,
             amount: dto.amount,
             tokens: tokens,
             paymentMethod: 'mpesa',
@@ -96,9 +98,15 @@ export class TransactionsService {
             metadata: {
                 phoneNumber: dto.phoneNumber,
                 initiatedAt: new Date(),
-                environment: paymentMethod.environment
+                environment: paymentMethod.environment,
+                source: userId ? 'dashboard' : 'payment-session',
+                sessionToken: (dto as any).sessionToken || undefined,
             }
-        });
+        };
+        if (userId) {
+            transactionData.userId = userId;
+        }
+        const transaction = new this.transactionModel(transactionData);
 
         await transaction.save();
 
@@ -241,6 +249,12 @@ export class TransactionsService {
             return { ResultCode: 1, ResultDesc: 'Transaction not found' };
         }
 
+        // Idempotency: if already completed, ignore repeated callbacks
+        if (transaction.status === 'completed') {
+            console.log(`[M-Pesa] Transaction ${transaction._id} already completed — ignoring duplicate callback`);
+            return { ResultCode: 0, ResultDesc: 'Already processed' };
+        }
+
         // Store full callback in metadata
         transaction.metadata = {
             ...transaction.metadata,
@@ -272,6 +286,19 @@ export class TransactionsService {
             } catch (credError) {
                 console.error(`[M-Pesa] Failed to update credits for transaction ${transaction._id}:`, credError.message);
                 // We don't change transaction status to failed here because payment WAS successful
+            }
+            // If this transaction maps to a payment session, mark it completed
+            try {
+                const checkoutId = transaction.checkoutRequestId || transaction.merchantRequestId;
+                if (checkoutId) {
+                    const session = await this.paymentSessionsService.findByGatewayReference(checkoutId);
+                    if (session) {
+                        await this.paymentSessionsService.markCompletedByGatewayRef(checkoutId, { phone: transaction.metadata?.phoneNumber, gatewayReference: checkoutId });
+                        console.log(`[M-Pesa] Payment session ${session.sessionToken} marked completed`);
+                    }
+                }
+            } catch (sessErr) {
+                console.error('[M-Pesa] Failed to update payment session:', sessErr.message);
             }
         } else {
             // Failed
