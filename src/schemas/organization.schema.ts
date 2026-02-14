@@ -16,8 +16,8 @@ export class Organization extends Document {
   @Prop({ required: true })
   country: string;
 
-  @Prop({ default: 0 })
-  credits: number; // For future
+  @Prop({ default: 2 })
+  credits: number; // For future (default free testing tokens)
 
   @Prop({ type: String, default: null })
   emailFromName: string; // overrides org.name
