@@ -1,6 +1,6 @@
 // src/schemas/organization.schema.ts (new file)
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 @Schema({ timestamps: true })
 export class Organization extends Document {
@@ -61,6 +61,9 @@ export class Organization extends Document {
     whatsapp: number;
     email: number;
   };
+
+  @Prop({ type: Types.ObjectId, ref: 'PaymentMethod', default: null })
+  paymentMethod: Types.ObjectId | null; // assigned payment method; null → use system default
 }
 
 export const OrganizationSchema = SchemaFactory.createForClass(Organization);

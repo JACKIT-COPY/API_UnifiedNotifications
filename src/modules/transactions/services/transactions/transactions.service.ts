@@ -65,10 +65,22 @@ export class TransactionsService {
      * Initiate a payment transaction (MPesa STK Push)
      */
     async initiatePayment(user: any, dto: InitiatePaymentDto): Promise<Transaction> {
-        // 1. Determine which payment method to use
+        // 1. Validate organization
+        const orgId = dto.organizationId || user.organization;
+        const org = await this.organizationsService.getById(orgId); // Throws if not found
+
+        // 2. Determine which payment method to use
         let paymentMethod;
         if (dto.paymentMethodId) {
             paymentMethod = await this.paymentMethodsService.findOne(dto.paymentMethodId);
+        } else if (org.paymentMethod) {
+            // Use organization-specific payment method
+            try {
+                paymentMethod = await this.paymentMethodsService.findOne(org.paymentMethod.toString());
+            } catch (error) {
+                console.warn(`Organization assigned payment method ${org.paymentMethod} not found, falling back to default`);
+                paymentMethod = await this.paymentMethodsService.findDefault();
+            }
         } else {
             paymentMethod = await this.paymentMethodsService.findDefault();
         }
@@ -76,10 +88,6 @@ export class TransactionsService {
         if (!paymentMethod || !paymentMethod.isActive) {
             throw new BadRequestException('No active payment method available');
         }
-
-        // 2. Validate organization
-        const orgId = dto.organizationId || user.organization;
-        const org = await this.organizationsService.getById(orgId); // Throws if not found
 
         // 3. Calculate tokens (assuming 1 KES = 1 Token)
         const rate = 1;
