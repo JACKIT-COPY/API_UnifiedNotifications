@@ -6,7 +6,7 @@ import { ConfigService } from '@nestjs/config';
 
 @Controller()
 export class PaymentSessionsController {
-  constructor(private readonly sessionsService: PaymentSessionsService, private readonly config: ConfigService) {}
+  constructor(private readonly sessionsService: PaymentSessionsService, private readonly config: ConfigService) { }
 
   @Post('organizations/:id/public-pay-session')
   @UseGuards(JwtAuthGuard, AdminGuard)
@@ -18,7 +18,7 @@ export class PaymentSessionsController {
 
     const session = await this.sessionsService.createForOrg(id, { amount: body.amount, mode: body.mode, expiresInMinutes: body.expiresInMinutes, ratesSnapshot, createdBy });
 
-    const publicUrlBase = this.config.get('PUBLIC_URL') || this.config.get('APP_URL') || `http://localhost:3000`;
+    const publicUrlBase = this.config.get('PUBLIC_URL') || this.config.get('APP_URL') || `https://uniflow-client.vercel.app`;
 
     return { url: `${publicUrlBase.replace(/\/$/, '')}/pay/${session.sessionToken}`, session };
   }
