@@ -26,6 +26,12 @@ export class Organization extends Document {
   @Prop({ type: Object, default: {} })
   credentials: Record<string, string>;
 
+  @Prop({ type: String, default: 'Active' })
+  status: string;
+
+  @Prop({ type: Boolean, default: false })
+  isDeleted: boolean;
+
   @Prop({
     type: {
       sms: { type: Number, default: 1 },

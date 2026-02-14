@@ -8,6 +8,7 @@ import {
     Param,
     Request,
     UseGuards,
+    Query,
 } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { AdminGuard } from 'src/modules/auth/guards/admin.guard';
@@ -25,8 +26,13 @@ export class ApiKeysController {
      */
     @Post()
     async create(@Body() createDto: CreateApiKeyDto, @Request() req) {
+        // Allow superadmin to create keys for any organization by providing `organization` in body
+        const orgToUse = req.user?.role === 'superadmin' && createDto.organization
+            ? createDto.organization
+            : req.user.orgId;
+
         return this.apiKeysService.generateKey(
-            req.user.orgId,
+            orgToUse,
             req.user.userId,
             createDto,
         );
@@ -36,31 +42,36 @@ export class ApiKeysController {
      * List all API keys for the current organization (safe view — no key hashes).
      */
     @Get()
-    async list(@Request() req) {
-        return this.apiKeysService.listKeys(req.user.orgId);
+    async list(@Request() req, @Query('orgId') orgId?: string) {
+        // Superadmins may pass ?orgId= to list keys for any organization
+        const orgToUse = req.user?.role === 'superadmin' && orgId ? orgId : req.user.orgId;
+        return this.apiKeysService.listKeys(orgToUse);
     }
 
     /**
      * Revoke (deactivate) an API key — it can no longer be used for authentication.
      */
     @Put(':id/revoke')
-    async revoke(@Param('id') id: string, @Request() req) {
-        return this.apiKeysService.revokeKey(id, req.user.orgId);
+    async revoke(@Param('id') id: string, @Request() req, @Query('orgId') orgId?: string) {
+        const orgToUse = req.user?.role === 'superadmin' && orgId ? orgId : req.user.orgId;
+        return this.apiKeysService.revokeKey(id, orgToUse);
     }
 
     /**
      * Re-activate a previously revoked API key.
      */
     @Put(':id/activate')
-    async activate(@Param('id') id: string, @Request() req) {
-        return this.apiKeysService.activateKey(id, req.user.orgId);
+    async activate(@Param('id') id: string, @Request() req, @Query('orgId') orgId?: string) {
+        const orgToUse = req.user?.role === 'superadmin' && orgId ? orgId : req.user.orgId;
+        return this.apiKeysService.activateKey(id, orgToUse);
     }
 
     /**
      * Permanently delete an API key.
      */
     @Delete(':id')
-    async delete(@Param('id') id: string, @Request() req) {
-        return this.apiKeysService.deleteKey(id, req.user.orgId);
+    async delete(@Param('id') id: string, @Request() req, @Query('orgId') orgId?: string) {
+        const orgToUse = req.user?.role === 'superadmin' && orgId ? orgId : req.user.orgId;
+        return this.apiKeysService.deleteKey(id, orgToUse);
     }
 }

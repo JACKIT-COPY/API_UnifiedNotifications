@@ -116,10 +116,13 @@ export class ApiKeysService {
     /**
      * List all API keys for an organization (safe — no key hashes returned).
      */
-    async listKeys(orgId: string): Promise<any[]> {
+    async listKeys(orgId?: string): Promise<any[]> {
+        const filter: any = {};
+        if (orgId) filter.organization = orgId;
+
         const keys = await this.apiKeyModel
-            .find({ organization: orgId })
-            .select('prefix name permissions isActive lastUsedAt expiresAt createdAt createdBy')
+            .find(filter)
+            .select('prefix name permissions isActive lastUsedAt expiresAt createdAt createdBy organization')
             .populate('createdBy', 'firstName lastName email')
             .sort({ createdAt: -1 })
             .exec();
@@ -130,11 +133,11 @@ export class ApiKeysService {
     /**
      * Revoke (deactivate) an API key.
      */
-    async revokeKey(keyId: string, orgId: string): Promise<any> {
-        const key = await this.apiKeyModel.findOne({
-            _id: keyId,
-            organization: orgId,
-        });
+    async revokeKey(keyId: string, orgId?: string): Promise<any> {
+        const query: any = { _id: keyId };
+        if (orgId) query.organization = orgId;
+
+        const key = await this.apiKeyModel.findOne(query);
 
         if (!key) {
             throw new NotFoundException('API key not found');
@@ -143,9 +146,7 @@ export class ApiKeysService {
         key.isActive = false;
         await key.save();
 
-        this.logger.log(
-            `[API-KEY] Revoked key "${key.name}" (prefix: ${key.prefix}) for org ${orgId}`,
-        );
+        this.logger.log(`[API-KEY] Revoked key "${key.name}" (prefix: ${key.prefix})` + (orgId ? ` for org ${orgId}` : ''));
 
         return { message: 'API key revoked successfully', prefix: key.prefix };
     }
@@ -153,11 +154,11 @@ export class ApiKeysService {
     /**
      * Re-activate a previously revoked API key.
      */
-    async activateKey(keyId: string, orgId: string): Promise<any> {
-        const key = await this.apiKeyModel.findOne({
-            _id: keyId,
-            organization: orgId,
-        });
+    async activateKey(keyId: string, orgId?: string): Promise<any> {
+        const query: any = { _id: keyId };
+        if (orgId) query.organization = orgId;
+
+        const key = await this.apiKeyModel.findOne(query);
 
         if (!key) {
             throw new NotFoundException('API key not found');
@@ -166,9 +167,7 @@ export class ApiKeysService {
         key.isActive = true;
         await key.save();
 
-        this.logger.log(
-            `[API-KEY] Re-activated key "${key.name}" (prefix: ${key.prefix}) for org ${orgId}`,
-        );
+        this.logger.log(`[API-KEY] Re-activated key "${key.name}" (prefix: ${key.prefix})` + (orgId ? ` for org ${orgId}` : ''));
 
         return { message: 'API key activated successfully', prefix: key.prefix };
     }
@@ -176,19 +175,17 @@ export class ApiKeysService {
     /**
      * Permanently delete an API key.
      */
-    async deleteKey(keyId: string, orgId: string): Promise<any> {
-        const key = await this.apiKeyModel.findOneAndDelete({
-            _id: keyId,
-            organization: orgId,
-        });
+    async deleteKey(keyId: string, orgId?: string): Promise<any> {
+        const query: any = { _id: keyId };
+        if (orgId) query.organization = orgId;
+
+        const key = await this.apiKeyModel.findOneAndDelete(query);
 
         if (!key) {
             throw new NotFoundException('API key not found');
         }
 
-        this.logger.log(
-            `[API-KEY] Deleted key "${key.name}" (prefix: ${key.prefix}) for org ${orgId}`,
-        );
+        this.logger.log(`[API-KEY] Deleted key "${key.name}" (prefix: ${key.prefix})` + (orgId ? ` for org ${orgId}` : ''));
 
         return { message: 'API key deleted permanently' };
     }

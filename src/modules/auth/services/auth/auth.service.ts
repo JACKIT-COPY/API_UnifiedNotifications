@@ -15,6 +15,13 @@ export class AuthService {
     private jwtService: JwtService,
   ) { }
 
+  private getTokenExpiryTimestamp(): string {
+    // Keep in sync with JwtModule signOptions.expiresIn ('1h')
+    const expiresInSeconds = 60 * 60; // 1 hour
+    const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
+    return expiresAt.toISOString();
+  }
+
   async signup(payload: any): Promise<any> {
     const { firstName, lastName, email, password, countryCode, phoneNumber, companyName, sector, country, role } = payload;
     const existingUser = await this.userModel.findOne({ email });
@@ -30,7 +37,9 @@ export class AuthService {
     await user.save();
 
     const token = this.jwtService.sign({ userId: user._id, orgId: org._id, role: user.role });
-    return { token, user };
+    const expiresAt = this.getTokenExpiryTimestamp();
+
+    return { token, user, expiresAt };
   }
 
   async login(email: string, password: string): Promise<any> {
@@ -38,7 +47,9 @@ export class AuthService {
     if (!user || !(await bcrypt.compare(password, user.password))) throw new BadRequestException('Invalid credentials');
 
     const token = this.jwtService.sign({ userId: user._id, orgId: user.organization, role: user.role });
-    return { token, user };
+    const expiresAt = this.getTokenExpiryTimestamp();
+
+    return { token, user, expiresAt };
   }
 
   // For admin creating users: similar to signup, but require admin auth
