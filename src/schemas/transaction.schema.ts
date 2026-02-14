@@ -9,8 +9,8 @@ export class Transaction {
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Organization', required: true })
     organizationId: string;
 
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
-    userId: string; // The user who initiated the transaction
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
+    userId: string; // The user who initiated the transaction (optional for public payments)
 
     @Prop({ required: true })
     amount: number;

@@ -46,6 +46,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     SystemLogsModule,
     TemplatesModule,
     PaymentMethodsModule,
+    // Public payment sessions for admin-generated links
+    require('./modules/payment-sessions/payment-sessions.module').PaymentSessionsModule,
     TransactionsModule,
     UsageModule,
     ApiKeysModule,
