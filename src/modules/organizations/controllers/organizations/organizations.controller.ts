@@ -125,4 +125,14 @@ export class OrganizationsController {
   async softDeleteOrganization(@Param('orgId') orgId: string) {
     return this.organizationsService.softDelete(orgId);
   }
+
+  // Super-admin: Assign a payment method to an organization
+  @Patch(':orgId/payment-method')
+  @UseGuards(SuperAdminGuard)
+  async assignPaymentMethod(
+    @Param('orgId') orgId: string,
+    @Body('paymentMethodId') paymentMethodId: string | null,
+  ) {
+    return this.organizationsService.assignPaymentMethod(orgId, paymentMethodId);
+  }
 }
