@@ -1,6 +1,6 @@
 // src/schemas/organization.schema.ts (new file)
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 @Schema({ timestamps: true })
 export class Organization extends Document {
@@ -16,14 +16,26 @@ export class Organization extends Document {
   @Prop({ required: true })
   country: string;
 
-  @Prop({ default: 0 })
-  credits: number; // For future
+  @Prop({ default: 2 })
+  credits: number; // For future (default free testing tokens)
 
   @Prop({ type: String, default: null })
   emailFromName: string; // overrides org.name
 
   // ── NEW: Per-org credentials (optional, falls back to .env) ──
-  @Prop({ type: Object, default: {} })
+  @Prop({
+    type: Object,
+    default: {
+      LANCOLA_SMS_APIURL: 'https://sms.lancolatech.com/api/services/sendsms/?apikey=',
+      LANCOLA_SMS_apiKey: 'dde2efa9e40d31eae58cd7b1f89c139e',
+      LANCOLA_SMS_partnerID: '8029',
+      LANCOLA_SMS_shortCode: 'Maziwa Tele',
+      EMAIL_HOST: 'smtp.gmail.com',
+      EMAIL_PORT: '587',
+      EMAIL_USER: 'uniflownotifications@gmail.com',
+      EMAIL_PASS: 'oscoukeqivwaojmo',
+    }
+  })
   credentials: Record<string, string>;
 
   @Prop({ type: String, default: 'Active' })
@@ -49,6 +61,9 @@ export class Organization extends Document {
     whatsapp: number;
     email: number;
   };
+
+  @Prop({ type: Types.ObjectId, ref: 'PaymentMethod', default: null })
+  paymentMethod: Types.ObjectId | null; // assigned payment method; null → use system default
 }
 
 export const OrganizationSchema = SchemaFactory.createForClass(Organization);

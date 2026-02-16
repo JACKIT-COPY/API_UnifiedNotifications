@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { UsersModule } from '../users/users.module';
 import { ContactsModule } from '../contacts/contacts.module';
+import { OrganizationsModule } from '../organizations/organizations.module';
 import { NotificationsService } from './services/notifications/notifications.service';
 import { NotificationsController } from './controllers/notifications/notifications.controller';
 import { LancolaSmsModule } from 'src/integrations/lancola-sms/lancola-sms.module';
@@ -20,6 +21,7 @@ import { SchedulingService } from './services/notifications/scheduling.service';
     LancolaEmailModule,
     LancolaWhatsAppModule,
     MessageLogsModule,
+    OrganizationsModule,
   ],
   controllers: [NotificationsController],
   providers: [NotificationsService, SchedulingService],

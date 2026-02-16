@@ -6,14 +6,17 @@ import { TransactionsService } from './services/transactions/transactions.servic
 import { Transaction, TransactionSchema } from 'src/schemas/transaction.schema';
 import { PaymentMethodsModule } from '../payment-methods/payment-methods.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
+import { forwardRef } from '@nestjs/common';
+import { PaymentSessionsModule } from '../payment-sessions/payment-sessions.module';
 
 import { HttpModule } from '@nestjs/axios';
 
 @Module({
     imports: [
         MongooseModule.forFeature([{ name: Transaction.name, schema: TransactionSchema }]),
-        PaymentMethodsModule,
-        OrganizationsModule,
+            PaymentMethodsModule,
+            OrganizationsModule,
+            forwardRef(() => PaymentSessionsModule),
         HttpModule,
     ],
     controllers: [TransactionsController],

@@ -158,4 +158,16 @@ export class OrganizationsService {
     org.status = 'Deleted';
     return org.save();
   }
+
+  /**
+   * Assign a payment method to an organisation.
+   * Pass `null` to reset to the system default.
+   */
+  async assignPaymentMethod(orgId: string, paymentMethodId: string | null): Promise<Organization> {
+    const org = await this.orgModel.findById(new Types.ObjectId(orgId));
+    if (!org) throw new NotFoundException('Organization not found');
+
+    org.paymentMethod = paymentMethodId ? new Types.ObjectId(paymentMethodId) : null;
+    return org.save();
+  }
 }
