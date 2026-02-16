@@ -1,5 +1,10 @@
 // src/modules/notifications/services/notifications/notifications.service.ts
-import { Injectable, BadRequestException, Logger, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  Logger,
+  ForbiddenException,
+} from '@nestjs/common';
 import { LancolaSmsService } from 'src/integrations/lancola-sms/services/lancola-sms/lancola-sms.service';
 import { LancolaEmailService } from 'src/integrations/lancola-email/services/lancola-email/lancola-email.service';
 import { LancolaWhatsAppService } from 'src/integrations/lancola-whatsapp/services/lancola-whatsapp/lancola-whatsapp.service';
@@ -31,7 +36,7 @@ export class NotificationsService {
     private readonly contactsService: ContactsService,
     private readonly messageLogsService: MessageLogsService,
     private readonly organizationsService: OrganizationsService,
-  ) { }
+  ) {}
 
   /**
    * Get the per-message cost for a channel based on org rates.
@@ -100,7 +105,9 @@ export class NotificationsService {
 
       // Deduct credits upfront for scheduled messages
       await this.organizationsService.updateCredits(orgId, -rate);
-      this.logger.log(`Deducted ${rate} credit(s) from org ${orgId} for scheduled ${payload.type} message. Remaining: ${org.credits - rate}`);
+      this.logger.log(
+        `Deducted ${rate} credit(s) from org ${orgId} for scheduled ${payload.type} message. Remaining: ${org.credits - rate}`,
+      );
 
       await this.messageLogsService.logMessage(
         payload.type,
@@ -111,7 +118,10 @@ export class NotificationsService {
         payload.message?.substring(0, 100) || '',
         payload.message?.length || 0,
         rate, // True cost from org rates
-        payload.attachments?.map((a) => ({ filename: a.filename, contentType: a.contentType || 'application/octet-stream' })),
+        payload.attachments?.map((a) => ({
+          filename: a.filename,
+          contentType: a.contentType || 'application/octet-stream',
+        })),
         undefined, // campaignId
         payload.scheduledAt,
         'scheduled',
@@ -141,7 +151,9 @@ export class NotificationsService {
       switch (payload.type) {
         case NotificationType.SMS:
           if (!payload.message) {
-            throw new BadRequestException('Message is required for SMS notifications');
+            throw new BadRequestException(
+              'Message is required for SMS notifications',
+            );
           }
           providerResponse = await this.lancolaSmsService.sendSMS(
             {
@@ -154,11 +166,26 @@ export class NotificationsService {
 
         case NotificationType.EMAIL:
           if (!payload.subject) {
-            throw new BadRequestException('Subject is required for email notifications');
+            throw new BadRequestException(
+              'Subject is required for email notifications',
+            );
           }
           if (!payload.message) {
-            throw new BadRequestException('Message is required for email notifications');
+            throw new BadRequestException(
+              'Message is required for email notifications',
+            );
           }
+
+          this.logger.debug(
+            `[NotificationService] Calling email service with payload:`,
+          );
+          this.logger.debug(
+            `[NotificationService] To: ${payload.to}, Subject: ${payload.subject}`,
+          );
+          this.logger.debug(
+            `[NotificationService] Message length: ${payload.message?.length}, Attachments: ${payload.attachments?.length || 0}`,
+          );
+
           providerResponse = await this.lancolaEmailService.sendEmail(
             {
               to: payload.to,
@@ -168,6 +195,10 @@ export class NotificationsService {
               attachments: payload.attachments,
             },
             orgId,
+          );
+
+          this.logger.debug(
+            `[NotificationService] Email service completed successfully`,
           );
           break;
 
@@ -181,14 +212,18 @@ export class NotificationsService {
           break;
 
         default:
-          throw new BadRequestException('Invalid or unsupported notification type');
+          throw new BadRequestException(
+            'Invalid or unsupported notification type',
+          );
       }
 
       // ── Deduct credits on success (only for immediate sends) ──
       // Scheduled sends already had credits deducted at schedule time.
       if (!isScheduledExecution) {
         await this.organizationsService.updateCredits(orgId, -rate);
-        this.logger.log(`Deducted ${rate} credit(s) from org ${orgId} for ${payload.type}. Remaining: ${org.credits - rate}`);
+        this.logger.log(
+          `Deducted ${rate} credit(s) from org ${orgId} for ${payload.type}. Remaining: ${org.credits - rate}`,
+        );
       }
 
       // Log success (only if not a scheduled retry, to avoid duplicates)
@@ -202,13 +237,18 @@ export class NotificationsService {
             {
               recipient,
               status: 'success',
-              response: providerResponse ? JSON.stringify(providerResponse) : undefined,
+              response: providerResponse
+                ? JSON.stringify(providerResponse)
+                : undefined,
             },
           ],
           payload.message?.substring(0, 100) || '',
           payload.message?.length || 0,
           rate, // True cost from org rates
-          payload.attachments?.map((a) => ({ filename: a.filename, contentType: a.contentType || 'application/octet-stream' })),
+          payload.attachments?.map((a) => ({
+            filename: a.filename,
+            contentType: a.contentType || 'application/octet-stream',
+          })),
           undefined, // campaignId
           undefined, // scheduledAt
           'sent',
@@ -237,7 +277,10 @@ export class NotificationsService {
             payload.message?.substring(0, 100) || '',
             payload.message?.length || 0,
             0, // no cost on failure
-            payload.attachments?.map((a) => ({ filename: a.filename, contentType: a.contentType || 'application/octet-stream' })),
+            payload.attachments?.map((a) => ({
+              filename: a.filename,
+              contentType: a.contentType || 'application/octet-stream',
+            })),
             undefined, // campaignId
             undefined, // scheduledAt
             'failed',
@@ -245,14 +288,18 @@ export class NotificationsService {
             payload.subject,
           );
         } catch (logError) {
-          this.logger.error(`Failed to log failure: ${logError?.message || logError}`);
+          this.logger.error(
+            `Failed to log failure: ${logError?.message || logError}`,
+          );
         }
       }
 
       if (logId) {
         await this.messageLogsService.updateLogStatus(logId, 'failed');
       }
-      this.logger.error(`Failed to send ${payload.type} to ${recipient}: ${error.message}`);
+      this.logger.error(
+        `Failed to send ${payload.type} to ${recipient}: ${error.message}`,
+      );
       throw error;
     }
   }
@@ -307,7 +354,11 @@ export class NotificationsService {
 
     for (const recipient of recipients) {
       try {
-        await this.sendNotification({ ...payload, to: recipient }, orgId, userId);
+        await this.sendNotification(
+          { ...payload, to: recipient },
+          orgId,
+          userId,
+        );
         results.push({ recipient, status: 'success' });
       } catch (error) {
         results.push({ recipient, status: 'failed', error: error.message });
@@ -327,7 +378,8 @@ export class NotificationsService {
     const validContacts: { contact: Contact; recipient: string }[] = [];
     for (const contact of contacts) {
       const recipient =
-        payload.type === NotificationType.SMS || payload.type === NotificationType.WHATSAPP
+        payload.type === NotificationType.SMS ||
+        payload.type === NotificationType.WHATSAPP
           ? contact.phone
           : contact.email;
 
@@ -353,19 +405,28 @@ export class NotificationsService {
     // Add failed entries for contacts without valid info
     for (const contact of contacts) {
       const recipient =
-        payload.type === NotificationType.SMS || payload.type === NotificationType.WHATSAPP
+        payload.type === NotificationType.SMS ||
+        payload.type === NotificationType.WHATSAPP
           ? contact.phone
           : contact.email;
 
       if (!recipient) {
-        results.push({ recipient: '', status: 'failed', error: 'No contact info' });
+        results.push({
+          recipient: '',
+          status: 'failed',
+          error: 'No contact info',
+        });
       }
     }
 
     // Send to valid contacts
     for (const { recipient } of validContacts) {
       try {
-        await this.sendNotification({ ...payload, to: recipient }, orgId, userId);
+        await this.sendNotification(
+          { ...payload, to: recipient },
+          orgId,
+          userId,
+        );
         results.push({ recipient, status: 'success' });
       } catch (error) {
         results.push({ recipient, status: 'failed', error: error.message });
