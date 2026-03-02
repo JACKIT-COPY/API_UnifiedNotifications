@@ -68,7 +68,7 @@ export class LoggingInterceptor implements NestInterceptor {
             duration,
             ip,
             userAgent,
-            userId: user?.id || user?._id || null,
+            userId: user?.userId || user?.id || user?._id || null,
             orgId: user?.orgId || null,
             response: responseData, // Careful with large responses
             error,
