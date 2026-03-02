@@ -105,6 +105,23 @@ export class OrganizationsController {
     throw new ForbiddenException('You do not have access to update credentials for this organization');
   }
 
+  // Update SMS Provider settings
+  @Patch(':orgId/sms-provider')
+  async updateSmsProvider(
+    @Param('orgId') orgId: string,
+    @Body('provider') provider: string,
+    @Body('credentials') credentials: Record<string, string>,
+    @Request() req
+  ) {
+    const user = req.user;
+
+    if (user.role === 'superadmin' || (user.role === 'admin' && user.orgId === orgId)) {
+      return this.organizationsService.updateSmsProvider(orgId, provider, credentials);
+    }
+
+    throw new ForbiddenException('You do not have access to update SMS provider for this organization');
+  }
+
   // Super-admin: Suspend an organization
   @Patch(':orgId/suspend')
   @UseGuards(SuperAdminGuard)

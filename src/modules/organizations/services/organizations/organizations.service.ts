@@ -37,6 +37,14 @@ export class OrganizationsService {
     return org.save();
   }
 
+  async updateProviderState(id: string, newState: Record<string, any>): Promise<Organization> {
+    const org = await this.orgModel.findById(new Types.ObjectId(id));
+    if (!org) throw new NotFoundException('Organization not found');
+
+    org.providerState = { ...org.providerState, ...newState };
+    return org.save();
+  }
+
   async update(id: string, updateData: any): Promise<Organization> {
     const org = await this.orgModel.findByIdAndUpdate(
       new Types.ObjectId(id),
@@ -45,6 +53,15 @@ export class OrganizationsService {
     ).exec();
     if (!org) throw new NotFoundException('Organization not found');
     return org;
+  }
+
+  async updateSmsProvider(id: string, provider: string, credentials: Record<string, string>): Promise<Organization> {
+    const org = await this.orgModel.findById(new Types.ObjectId(id));
+    if (!org) throw new NotFoundException('Organization not found');
+
+    org.smsProvider = provider;
+    org.credentials = { ...org.credentials, ...credentials };
+    return org.save();
   }
 
   async updateCredits(id: string, amount: number): Promise<Organization> {

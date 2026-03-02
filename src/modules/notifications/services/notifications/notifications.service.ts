@@ -1,6 +1,6 @@
 // src/modules/notifications/services/notifications/notifications.service.ts
 import { Injectable, BadRequestException, Logger, ForbiddenException } from '@nestjs/common';
-import { LancolaSmsService } from 'src/integrations/lancola-sms/services/lancola-sms/lancola-sms.service';
+import { SmsProviderFactory } from 'src/integrations/services/sms-provider-factory.service';
 import { LancolaEmailService } from 'src/integrations/lancola-email/services/lancola-email/lancola-email.service';
 import { LancolaWhatsAppService } from 'src/integrations/lancola-whatsapp/services/lancola-whatsapp/lancola-whatsapp.service';
 import { UsersService } from 'src/modules/users/services/users/users.service';
@@ -24,7 +24,7 @@ export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
   constructor(
-    private readonly lancolaSmsService: LancolaSmsService,
+    private readonly smsProviderFactory: SmsProviderFactory,
     private readonly lancolaEmailService: LancolaEmailService,
     private readonly lancolaWhatsAppService: LancolaWhatsAppService,
     private readonly usersService: UsersService,
@@ -143,12 +143,13 @@ export class NotificationsService {
           if (!payload.message) {
             throw new BadRequestException('Message is required for SMS notifications');
           }
-          providerResponse = await this.lancolaSmsService.sendSMS(
+          const smsProvider = this.smsProviderFactory.getProvider(org);
+          providerResponse = await smsProvider.sendSMS(
             {
               phone: payload.to as string,
               message: payload.message,
             },
-            orgId,
+            { ...org.credentials, orgId: org._id.toString() },
           );
           break;
 

@@ -1,29 +1,25 @@
 // src/integrations/lancola-sms/services/lancola-sms/lancola-sms.service.ts
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import axios from 'axios';
-import { OrganizationsService } from 'src/modules/organizations/services/organizations/organizations.service';
 import { phoneNumberWithCountryCode, prepareMessage, LancolaSmsConfig } from './lancola-sms.functions';
 import { SMSInterface } from './sms.interface';
 
 
+import { ISmsProvider } from '../../../interfaces/sms-provider.interface';
+
+
 @Injectable()
-export class LancolaSmsService {
+export class LancolaSmsService implements ISmsProvider {
   private readonly logger = new Logger(LancolaSmsService.name);
 
-  constructor(
-    private readonly organizationsService: OrganizationsService,
-  ) {}
+  constructor() {}
 
-  async sendSMS(payload: SMSInterface, orgId: string) {
-    const org = await this.organizationsService.getById(orgId);
-    const creds = org.credentials || {};
-
-    // Build effective config: org first, .env fallback
-    const config: LancolaSmsConfig = {
-      API_URL: creds.sms_apiUrl || process.env.LANCOLA_SMS_APIURL || '',
-      API_KEY: creds.sms_apiKey || process.env.LANCOLA_SMS_apiKey || '',
-      PARTNER_ID: creds.sms_partnerID || process.env.LANCOLA_SMS_partnerID || '',
-      SHORT_CODE: creds.sms_shortCode || process.env.LANCOLA_SMS_shortCode || '',
+  async sendSMS(payload: SMSInterface, config: any) {
+    const lancolaConfig: LancolaSmsConfig = {
+      API_URL: config.sms_apiUrl || process.env.LANCOLA_SMS_APIURL || '',
+      API_KEY: config.sms_apiKey || process.env.LANCOLA_SMS_apiKey || '',
+      PARTNER_ID: config.sms_partnerID || process.env.LANCOLA_SMS_partnerID || '',
+      SHORT_CODE: config.sms_shortCode || process.env.LANCOLA_SMS_shortCode || '',
     };
 
     // Validate required fields
@@ -35,7 +31,7 @@ export class LancolaSmsService {
     payload.phone = phoneNumber;
     this.logger.log(`[SMS] Normalized phone number to: ${phoneNumber}`);
 
-    const finalURL = prepareMessage(payload, config);
+    const finalURL = prepareMessage(payload, lancolaConfig);
     this.logger.log(`[SMS] Sending SMS to provider for phone: ${phoneNumber}`);
 
     try {

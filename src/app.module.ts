@@ -8,7 +8,7 @@ import { GroupsModule } from './modules/groups/groups.module';
 import { ContactsModule } from './modules/contacts/contacts.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
-import { LancolaSmsModule } from './integrations/lancola-sms/lancola-sms.module';
+import { IntegrationsModule } from './integrations/integrations.module';
 import { MessageLogsModule } from './modules/messages-logs/message-logs.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
@@ -39,7 +39,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     AuthModule,
     GroupsModule,
     ContactsModule,
-    LancolaSmsModule,
+    IntegrationsModule,
     OrganizationsModule,
     MessageLogsModule,
     CampaignsModule,

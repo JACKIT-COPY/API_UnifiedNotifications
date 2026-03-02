@@ -38,6 +38,16 @@ export class Organization extends Document {
   })
   credentials: Record<string, string>;
 
+  @Prop({ type: String, default: 'lancola' })
+  smsProvider: string; // 'lancola', 'belio', etc.
+
+  // ── NEW: Provider state (to store dynamic data like OAuth tokens) ──
+  @Prop({
+    type: Object,
+    default: {}
+  })
+  providerState: Record<string, any>;
+
   @Prop({ type: String, default: 'Active' })
   status: string;
 

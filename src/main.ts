@@ -22,6 +22,9 @@ async function bootstrap() {
     'http://localhost:3000',
     'http://localhost:3001',
     'http://localhost:3002',
+    'http://localhost:3003',
+    'http://localhost:4200',
+    'http://localhost:5000',
     'https://unified-notifications-admin.vercel.app',
     'https://uniflow-admin.vercel.app', // new admin vercel url
     'https://uniflow-client.vercel.app',// new client vercel url
