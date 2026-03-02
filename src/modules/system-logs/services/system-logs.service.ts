@@ -21,8 +21,10 @@ export class SystemLogsService {
         return savedLog;
     }
 
-    async getLogs(filters: any) {
+    async getLogs(orgId: string | null, filters: any) {
         const query: any = {};
+        if (orgId) query.orgId = orgId;
+
         if (filters.method) query.method = filters.method;
         if (filters.statusCode) query.statusCode = filters.statusCode;
         if (filters.url) query.url = { $regex: filters.url, $options: 'i' };
@@ -31,7 +33,7 @@ export class SystemLogsService {
         if (filters.dateTo) query.createdAt = { ...query.createdAt || {}, $lte: new Date(filters.dateTo) };
 
         return this.requestLogModel.find(query)
-            .populate('userId', 'name email')
+            .populate('userId', 'name email firstName lastName')
             .populate('orgId', 'name')
             .sort({ createdAt: -1 })
             .limit(100)

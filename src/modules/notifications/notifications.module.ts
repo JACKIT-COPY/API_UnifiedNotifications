@@ -5,7 +5,7 @@ import { ContactsModule } from '../contacts/contacts.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { NotificationsService } from './services/notifications/notifications.service';
 import { NotificationsController } from './controllers/notifications/notifications.controller';
-import { LancolaSmsModule } from 'src/integrations/lancola-sms/lancola-sms.module';
+import { IntegrationsModule } from 'src/integrations/integrations.module';
 import { LancolaEmailModule } from 'src/integrations/lancola-email/lancola-email.module';
 import { LancolaWhatsAppModule } from 'src/integrations/lancola-whatsapp/lancola-whatsapp.module';
 import { MessageLogsModule } from '../messages-logs/message-logs.module';
@@ -17,7 +17,7 @@ import { SchedulingService } from './services/notifications/scheduling.service';
     ConfigModule.forRoot(),
     UsersModule,
     ContactsModule,
-    LancolaSmsModule,
+    IntegrationsModule,
     LancolaEmailModule,
     LancolaWhatsAppModule,
     MessageLogsModule,

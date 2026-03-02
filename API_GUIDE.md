@@ -1,38 +1,40 @@
-# Unified Notifications API Guide
+# Uniflow Notifications API Guide
 
-This guide provides instructions and examples on how to use the Unified Notifications API using an **API Key**. 
+This guide provides instructions and examples on how to use the Uniflow Notifications API using an **API Key**. 
 
 ## Recommended Setup
 
 To keep your credentials secure, it is recommended to store your API details in a `.env` file within your project:
 
 ```bash
-Unified_API_URL=http://localhost:3040
-Unified_API_KEY=your_generated_api_key
+Uniflow_API_URL=https://smsapi.solby.io:8443 #digitalocean deployed backend
+Uniflow_API_KEY=your_generated_api_key # org specific api-key admin generated
 ```
 
 ---
 
 ## Authentication
 
-All requests to the Unified Notifications API must be authenticated. You can provide your API key in one of two ways:
+All requests to the Uniflow Notifications API must be authenticated. You can provide your API key in one of two ways:
 
 ### 1. HTTP Header (Recommended)
-Add the `UNIFIED-API-Key` header to your requests.
+Add the `Uniflow-API-Key` header to your requests.
 ```bash
-UNIFIED-API-Key: your_api_key_here
+Uniflow-API-Key: your_api_key_here
 ```
 
 ### 2. Query Parameter
 Append `apikey` to your request URL.
 ```
-http://localhost:3040/notifications/send?apikey=your_api_key_here
+
+Uniflow_API_URL=https://smsapi.solby.io:8443/notifications/send?apikey=your_api_key_here
 ```
 
 ---
 
 ## Base URL
-Default local development URL: `http://localhost:3040`
+Default local development URL: `
+Uniflow_API_URL=https://smsapi.solby.io:8443`
 
 ---
 
@@ -48,12 +50,12 @@ require('dotenv').config();
 
 async function sendNotification() {
   try {
-    const response = await axios.post(`${process.env.Unified_API_URL}/notifications/send`, {
+    const response = await axios.post(`${process.env.Uniflow_API_URL}/notifications/send`, {
       type: 'sms',
       to: '254712345678',
       message: 'Hello! This is an automated notification.'
     }, {
-      headers: { 'UNIFIED-API-Key': process.env.Unified_API_KEY }
+      headers: { 'Uniflow-API-Key': process.env.Uniflow_API_KEY }
     });
 
     console.log('Response:', response.data);
@@ -91,8 +93,8 @@ async function createContact() {
     tags: ["vip", "early-adopter"]
   };
 
-  const response = await axios.post(`${process.env.Unified_API_URL}/contacts`, payload, {
-    headers: { 'UNIFIED-API-Key': process.env.Unified_API_KEY }
+  const response = await axios.post(`${process.env.Uniflow_API_URL}/contacts`, payload, {
+    headers: { 'Uniflow-API-Key': process.env.Uniflow_API_KEY }
   });
 
   return response.data;
@@ -108,12 +110,12 @@ async function createContact() {
 
 **Node.js Example**:
 ```javascript
-const response = await axios.post(`${process.env.Unified_API_URL}/groups`, {
+const response = await axios.post(`${process.env.Uniflow_API_URL}/groups`, {
   name: "Marketing List",
   description: "Subscribers for weekly newsletter",
   color: "bg-blue-500/10 text-blue-500 border-blue-500/20"
 }, {
-  headers: { 'UNIFIED-API-Key': process.env.Unified_API_KEY }
+  headers: { 'Uniflow-API-Key': process.env.Uniflow_API_KEY }
 });
 ```
 
@@ -126,8 +128,8 @@ const response = await axios.post(`${process.env.Unified_API_URL}/groups`, {
 
 **Node.js Example**:
 ```javascript
-const response = await axios.get(`${process.env.Unified_API_URL}/templates`, {
-  headers: { 'UNIFIED-API-Key': process.env.Unified_API_KEY }
+const response = await axios.get(`${process.env.Uniflow_API_URL}/templates`, {
+  headers: { 'Uniflow-API-Key': process.env.Uniflow_API_KEY }
 });
 ```
 

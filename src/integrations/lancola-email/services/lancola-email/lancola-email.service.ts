@@ -12,15 +12,17 @@ export class LancolaEmailService {
     const org = await this.organizationsService.getById(orgId);
     const creds = org.credentials || {};
 
-    const host = creds.email_host || process.env.EMAIL_HOST || '';
-    const port = Number(creds.email_port || process.env.EMAIL_PORT || '587');
-    const user = creds.email_user || process.env.EMAIL_USER || '';
-    const pass = creds.email_pass || process.env.EMAIL_PASS || '';
-    const fromEmail = creds.email_from || process.env.EMAIL_USER || user; // fallback
+    const host = (creds.email_host || process.env.EMAIL_HOST || '').trim();
+    const port = Number((creds.email_port || process.env.EMAIL_PORT || '587').toString().trim());
+    const user = (creds.email_user || process.env.EMAIL_USER || '').trim();
+    const pass = (creds.email_pass || process.env.EMAIL_PASS || '').trim();
+    const fromEmail = (creds.email_from || process.env.EMAIL_USER || user).trim(); // fallback
 
     if (!host || !user || !pass) {
       throw new InternalServerErrorException('Missing required email credentials');
     }
+
+    console.log(`[LancolaEmailService] Attempting to connect to ${host}:${port} with user ${user}`);
 
     const transporter = nodemailer.createTransport({
       host,
@@ -28,9 +30,9 @@ export class LancolaEmailService {
       secure: port === 465, // implicit SSL only on 465
       auth: { user, pass },
       tls: { rejectUnauthorized: false }, // common for self-signed cPanel certs
-      connectionTimeout: 30000,
-      greetingTimeout: 30000,
-      socketTimeout: 30000,
+      connectionTimeout: 10000, // Shorter timeout for faster feedback
+      greetingTimeout: 10000,
+      socketTimeout: 10000,
     });
 
     const isHtml = payload.message && /<[^>]+>/.test(payload.message);
