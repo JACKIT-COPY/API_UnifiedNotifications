@@ -1,4 +1,12 @@
-# Unified Notifications Platform
+# Unified Notifications API
+
+A comprehensive NestJS-based notification service supporting Email, SMS, and WhatsApp integrations with MongoDB for data persistence.
+
+## 🚀 Quick Links
+
+- **Production API**: https://sms.lancolatech.co.ke
+- **Quick Start Guide**: [QUICK-START.md](QUICK-START.md)
+- **Full Deployment Guide**: [DEPLOYMENT.md](DEPLOYMENT.md)
 
 ## Overview
 This is a NestJS-based unified notifications platform that provides a single API endpoint for sending notifications across multiple channels: SMS (via Lancola SMS), Email (with attachment support), and WhatsApp (via Meta Cloud API, using templates). The goal is to centralize notification handling, making it scalable and maintainable.
