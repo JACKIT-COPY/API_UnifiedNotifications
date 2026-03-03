@@ -12,18 +12,18 @@ import { ISmsProvider } from '../../../interfaces/sms-provider.interface';
 export class LancolaSmsService implements ISmsProvider {
   private readonly logger = new Logger(LancolaSmsService.name);
 
-  constructor() {}
+  constructor() { }
 
   async sendSMS(payload: SMSInterface, config: any) {
     const lancolaConfig: LancolaSmsConfig = {
-      API_URL: config.sms_apiUrl || process.env.LANCOLA_SMS_APIURL || '',
-      API_KEY: config.sms_apiKey || process.env.LANCOLA_SMS_apiKey || '',
-      PARTNER_ID: config.sms_partnerID || process.env.LANCOLA_SMS_partnerID || '',
-      SHORT_CODE: config.sms_shortCode || process.env.LANCOLA_SMS_shortCode || '',
+      API_URL: config.sms_apiUrl || config.LANCOLA_SMS_APIURL || process.env.LANCOLA_SMS_APIURL || '',
+      API_KEY: config.sms_apiKey || config.LANCOLA_SMS_apiKey || process.env.LANCOLA_SMS_apiKey || '',
+      PARTNER_ID: config.sms_partnerID || config.LANCOLA_SMS_partnerID || process.env.LANCOLA_SMS_partnerID || '',
+      SHORT_CODE: config.sms_shortCode || config.LANCOLA_SMS_shortCode || process.env.LANCOLA_SMS_shortCode || '',
     };
 
     // Validate required fields
-    if (!config.API_URL || !config.API_KEY || !config.PARTNER_ID || !config.SHORT_CODE) {
+    if (!lancolaConfig.API_URL || !lancolaConfig.API_KEY || !lancolaConfig.PARTNER_ID || !lancolaConfig.SHORT_CODE) {
       throw new BadRequestException('Missing required SMS credentials');
     }
 
