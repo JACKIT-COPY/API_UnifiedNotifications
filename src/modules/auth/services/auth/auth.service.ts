@@ -39,14 +39,17 @@ export class AuthService {
     const token = this.jwtService.sign({ userId: user._id, orgId: org._id, role: user.role });
     const expiresAt = this.getTokenExpiryTimestamp();
 
-    return { token, user, expiresAt };
+    const userWithOrg = user.toObject() as any;
+    userWithOrg.organization = org;
+
+    return { token, user: userWithOrg, expiresAt };
   }
 
   async login(email: string, password: string): Promise<any> {
-    const user = await this.userModel.findOne({ email });
+    const user = await this.userModel.findOne({ email }).populate('organization');
     if (!user || !(await bcrypt.compare(password, user.password))) throw new BadRequestException('Invalid credentials');
 
-    const token = this.jwtService.sign({ userId: user._id, orgId: user.organization, role: user.role });
+    const token = this.jwtService.sign({ userId: user._id, orgId: (user.organization as any)._id || user.organization, role: user.role });
     const expiresAt = this.getTokenExpiryTimestamp();
 
     return { token, user, expiresAt };
