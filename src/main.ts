@@ -29,6 +29,8 @@ async function bootstrap() {
     'https://uniflow-admin.vercel.app', // new admin vercel url
     'https://uniflow-client.vercel.app',// new client vercel url
     'https://v0-imflow-website-design.vercel.app',
+    'https://erp.solby.io', //prod solby erp url
+    'https://e-commerce-admin-kappa-lac.vercel.app' //prod lancola cms
   ];
 
   app.enableCors({

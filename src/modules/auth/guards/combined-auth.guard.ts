@@ -31,7 +31,8 @@ export class CombinedAuthGuard implements CanActivate {
         // ── Strategy 1: API Key (query param or header) ──
         const apiKey =
             request.query?.apikey ||
-            request.headers['unified-api-key'];
+            request.headers['unified-api-key'] ||
+            request.headers['x-api-key'];
 
         if (apiKey) {
             const result = await this.apiKeysService.validateKey(apiKey);

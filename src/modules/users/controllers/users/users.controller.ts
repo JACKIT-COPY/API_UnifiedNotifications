@@ -13,11 +13,12 @@ import {
 } from '@nestjs/common';
 import { UsersService } from '../../services/users/users.service';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
+import { CombinedAuthGuard } from 'src/modules/auth/guards/combined-auth.guard';
 import { AdminGuard } from 'src/modules/auth/guards/admin.guard';
 import { SuperAdminGuard } from 'src/modules/auth/guards/super-admin.guard';
 
 @Controller('users')
-@UseGuards(JwtAuthGuard)
+@UseGuards(CombinedAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
 

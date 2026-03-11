@@ -1,11 +1,12 @@
 import { Controller, Get, Put, Patch, Body, UseGuards, Request, Param, ForbiddenException } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
+import { CombinedAuthGuard } from 'src/modules/auth/guards/combined-auth.guard';
 import { AdminGuard } from 'src/modules/auth/guards/admin.guard';
 import { SuperAdminGuard } from 'src/modules/auth/guards/super-admin.guard';
 import { OrganizationsService } from '../../services/organizations/organizations.service';
 
 @Controller('organizations')
-@UseGuards(JwtAuthGuard)
+@UseGuards(CombinedAuthGuard)
 export class OrganizationsController {
   constructor(private organizationsService: OrganizationsService) { }
 

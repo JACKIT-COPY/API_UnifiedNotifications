@@ -2,10 +2,11 @@
 import { Controller, Get, Param, UseGuards, Req, ForbiddenException } from '@nestjs/common';
 import { UsageService } from '../../services/usage/usage.service';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
+import { CombinedAuthGuard } from 'src/modules/auth/guards/combined-auth.guard';
 import { SuperAdminGuard } from 'src/modules/auth/guards/super-admin.guard';
 
 @Controller('usage')
-@UseGuards(JwtAuthGuard)
+@UseGuards(CombinedAuthGuard)
 export class UsageController {
     constructor(private readonly usageService: UsageService) { }
 

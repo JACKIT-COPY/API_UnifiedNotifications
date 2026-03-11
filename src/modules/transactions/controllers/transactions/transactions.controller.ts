@@ -15,10 +15,12 @@ import {
 import { TransactionsService } from '../../services/transactions/transactions.service';
 import { InitiatePaymentDto } from '../../dto/initiate-payment.dto';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
+import { CombinedAuthGuard } from 'src/modules/auth/guards/combined-auth.guard';
 import { AdminGuard } from 'src/modules/auth/guards/admin.guard'; // Use AdminGuard for viewing specific org
 import { SuperAdminGuard } from 'src/modules/auth/guards/super-admin.guard'; // Use SuperAdminGuard for all transactions
 
 @Controller('transactions')
+@UseGuards(CombinedAuthGuard)
 export class TransactionsController {
     constructor(private readonly transactionsService: TransactionsService) { }
 
@@ -27,7 +29,7 @@ export class TransactionsController {
      * GET /transactions
      */
     @Get()
-    @UseGuards(JwtAuthGuard, SuperAdminGuard)
+    @UseGuards(CombinedAuthGuard, SuperAdminGuard)
     async findAll() {
         return this.transactionsService.findAll();
     }
@@ -37,7 +39,7 @@ export class TransactionsController {
      * GET /transactions/me
      */
     @Get('me')
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(CombinedAuthGuard)
     async findMyTransactions(@Req() req: any) {
         const user = req.user;
         if (!user || !user.orgId) {
@@ -51,7 +53,7 @@ export class TransactionsController {
      * GET /transactions/organization/:orgId
      */
     @Get('organization/:orgId')
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(CombinedAuthGuard)
     async findByOrganization(@Param('orgId') orgId: string, @Req() req: any) {
         const user = req.user;
 
@@ -69,7 +71,7 @@ export class TransactionsController {
      * GET /transactions/:id
      */
     @Get(':id')
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(CombinedAuthGuard)
     async findOne(@Param('id') id: string, @Req() req: any) {
         const transaction = await this.transactionsService.findOne(id);
         const user = req.user;
@@ -87,7 +89,7 @@ export class TransactionsController {
      * POST /transactions/purchase
      */
     @Post('purchase')
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(CombinedAuthGuard)
     @HttpCode(HttpStatus.CREATED)
     async initiatePayment(@Req() req: any, @Body() initiateDto: InitiatePaymentDto) {
         return this.transactionsService.initiatePayment(req.user, initiateDto);

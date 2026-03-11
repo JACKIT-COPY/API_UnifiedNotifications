@@ -1,10 +1,11 @@
 import { Controller, Get, Query, UseGuards, Request } from '@nestjs/common';
 import { SystemLogsService } from '../services/system-logs.service';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
+import { CombinedAuthGuard } from 'src/modules/auth/guards/combined-auth.guard';
 import { SuperAdminGuard } from 'src/modules/auth/guards/super-admin.guard';
 
 @Controller('system-logs')
-@UseGuards(JwtAuthGuard)
+@UseGuards(CombinedAuthGuard)
 export class SystemLogsController {
     constructor(private readonly systemLogsService: SystemLogsService) { }
 
