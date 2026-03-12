@@ -105,4 +105,22 @@ export class TransactionsController {
         console.log('M-Pesa Callback Received:', JSON.stringify(payload));
         return this.transactionsService.handleCallback(payload);
     }
+
+    /**
+     * Update an external transaction status
+     * PATCH /transactions/:id/external-status
+     */
+    @Post(':id/external-status')
+    @UseGuards(CombinedAuthGuard)
+    async updateExternalStatus(
+        @Param('id') id: string,
+        @Body() body: { status: 'completed' | 'failed', receiptNumber?: string, errorMessage?: string }
+    ) {
+        return this.transactionsService.updateExternalTransaction(
+            id,
+            body.status,
+            body.receiptNumber,
+            body.errorMessage
+        );
+    }
 }

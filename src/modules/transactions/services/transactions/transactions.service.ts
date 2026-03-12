@@ -114,8 +114,16 @@ export class TransactionsService {
         if (userId) {
             transactionData.userId = userId;
         }
-        const transaction = new this.transactionModel(transactionData);
 
+        // Handle External Provider (Urchin)
+        if (dto.provider === 'urchin') {
+            transactionData.metadata.provider = 'urchin';
+            const transaction = new this.transactionModel(transactionData);
+            await transaction.save();
+            return transaction;
+        }
+
+        const transaction = new this.transactionModel(transactionData);
         await transaction.save();
 
         // 5. Update Payment Method Usage
@@ -174,7 +182,7 @@ export class TransactionsService {
                 ? 'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest'
                 : 'https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest';
 
-            const callbackUrl = process.env.MPESA_CALLBACK_URL || 'https://your-domain.com/transactions/callback';
+            const callbackUrl = process.env.MPESA_CALLBACK_URL || 'https://api-unifiednotifications-1.onrender.com/transactions/callback';
 
             const stkData = {
                 BusinessShortCode: businessShortCode,
@@ -321,5 +329,48 @@ export class TransactionsService {
         }
 
         return { ResultCode: 0, ResultDesc: 'Success' };
+    }
+
+    /**
+     * Update an external transaction status (Urchin)
+     */
+    async updateExternalTransaction(
+        id: string,
+        status: 'completed' | 'failed',
+        receiptNumber?: string,
+        errorMessage?: string
+    ) {
+        const transaction = await this.transactionModel.findById(id);
+        if (!transaction) {
+            throw new NotFoundException(`Transaction ${id} not found`);
+        }
+
+        if (transaction.status === 'completed') {
+            return transaction; // Already processed
+        }
+
+        transaction.status = status;
+        if (receiptNumber) {
+            transaction.mpesaReference = receiptNumber;
+        }
+
+        transaction.metadata = {
+            ...transaction.metadata,
+            externalUpdateAt: new Date(),
+            externalStatus: status,
+            externalError: errorMessage
+        };
+
+        await transaction.save();
+
+        if (status === 'completed') {
+            // Update organization credits
+            await this.organizationsService.updateCredits(
+                transaction.organizationId,
+                transaction.tokens
+            );
+        }
+
+        return transaction;
     }
 }

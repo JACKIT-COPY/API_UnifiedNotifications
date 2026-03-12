@@ -17,4 +17,8 @@ export class InitiatePaymentDto {
     @IsString()
     @IsOptional()
     organizationId?: string; // If superadmin is making the payment for an org
+
+    @IsString()
+    @IsOptional()
+    provider?: 'mpesa' | 'urchin'; // 'mpesa' for native, 'urchin' for external
 }
