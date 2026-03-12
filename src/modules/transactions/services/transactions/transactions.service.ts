@@ -66,7 +66,7 @@ export class TransactionsService {
      */
     async initiatePayment(user: any, dto: InitiatePaymentDto): Promise<Transaction> {
         // 1. Validate organization
-        const orgId = dto.organizationId || user.organization;
+        const orgId = dto.organizationId || user.orgId || user.organization;
         const org = await this.organizationsService.getById(orgId); // Throws if not found
 
         // 2. Determine which payment method to use
