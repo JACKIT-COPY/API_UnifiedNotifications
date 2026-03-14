@@ -52,6 +52,7 @@ export class PublicPaymentsController {
       sessionToken: session.sessionToken,
     };
 
+    const org = await this.organizationsService.getById(orgId);
     const transaction = await this.transactionsService.initiatePayment(systemUser, dto as any);
 
     // Update session with gateway reference if available (do not mark completed yet)
@@ -64,6 +65,49 @@ export class PublicPaymentsController {
       // ignore update failure for now, webhook will handle marking completed
     }
 
-    return { transactionId: (transaction as any)._id, checkoutRequestId: transaction.checkoutRequestId };
+    return { 
+      transactionId: (transaction as any)._id, 
+      checkoutRequestId: transaction.checkoutRequestId,
+      provider: transaction.metadata?.provider || 'mpesa',
+      clientId: transaction.metadata?.clientId,
+      organizationName: org.name
+    };
+  }
+
+  @Get('pay/:token/status/:transactionId')
+  async getTransactionStatus(@Param('token') token: string, @Param('transactionId') transactionId: string) {
+    const session = await this.sessionsService.findByToken(token);
+    if (!session) throw new NotFoundException('Session not found');
+
+    const transaction = await this.transactionsService.findOne(transactionId);
+    if (!transaction) throw new NotFoundException('Transaction not found');
+
+    return {
+      status: transaction.status,
+      checkoutRequestId: transaction.checkoutRequestId
+    };
+  }
+
+  @Post('pay/:token/external-status')
+  async updateExternalStatus(
+    @Param('token') token: string,
+    @Body() body: { transactionId: string, status: 'completed' | 'failed', receiptNumber?: string, errorMessage?: string }
+  ) {
+    const session = await this.sessionsService.findByToken(token);
+    if (!session) throw new NotFoundException('Session not found');
+
+    const result = await this.transactionsService.updateExternalTransaction(
+      body.transactionId,
+      body.status,
+      body.receiptNumber,
+      body.errorMessage
+    );
+
+    // If completed, also mark session as completed
+    if (body.status === 'completed' && body.receiptNumber) {
+      await this.sessionsService.markCompletedByGateway(token, body.receiptNumber);
+    }
+    
+    return { success: true, status: result.status };
   }
 }

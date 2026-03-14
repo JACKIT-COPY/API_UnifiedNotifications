@@ -12,20 +12,23 @@ export class PaymentMethod {
     @Prop({ required: true, enum: ['mpesa'], default: 'mpesa' })
     type: string;
 
-    @Prop({ required: true, default: 'M-Pesa STK Push' })
+    @Prop({ required: true, default: 'urchin' })
     provider: string;
 
-    @Prop({ required: true })
+    @Prop({ required: false })
     shortcode: string; // Paybill or Till number
 
-    @Prop({ required: true })
+    @Prop({ required: false })
     passkey: string; // Encrypted in production
 
-    @Prop({ required: true })
+    @Prop({ required: false })
     consumerKey: string; // Encrypted in production
 
-    @Prop({ required: true })
+    @Prop({ required: false })
     consumerSecret: string; // Encrypted in production
+
+    @Prop({ required: false })
+    clientId?: string; // For Urchin provider
 
     @Prop({ required: true, enum: ['paybill', 'till'], default: 'paybill' })
     mpesaType: string;

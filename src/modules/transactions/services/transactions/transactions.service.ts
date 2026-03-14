@@ -115,9 +115,12 @@ export class TransactionsService {
             transactionData.userId = userId;
         }
 
-        // Handle External Provider (Urchin)
-        if (dto.provider === 'urchin') {
+        // Determine Provider (Prefer DTO, fallback to Payment Method setting)
+        const provider = dto.provider || paymentMethod.provider;
+
+        if (provider === 'urchin') {
             transactionData.metadata.provider = 'urchin';
+            transactionData.metadata.clientId = paymentMethod.clientId;
             const transaction = new this.transactionModel(transactionData);
             await transaction.save();
             return transaction;
